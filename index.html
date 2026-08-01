@@ -502,7 +502,8 @@
         }
 
         function setupRefLink() {
-            const link = `https://t.me/${BOT_USERNAME}?start=ref_${userId}`;
+            // ДИНАМИЧЕСКАЯ ГЕНЕРАЦИЯ ССЫЛКИ ДЛЯ КАЖДОГО ЮЗЕРА ПО ЕГО ID (/app?startapp=)
+            const link = `https://t.me/${BOT_USERNAME}/app?startapp=ref_${userId}`;
             document.getElementById('refLinkInput').value = link;
         }
 
