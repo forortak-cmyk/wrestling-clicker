@@ -74,8 +74,8 @@
         .coin:active { transform: scale(0.92); }
         .coin-sub { font-size: 12px; font-weight: bold; margin-top: 5px; opacity: 0.8; }
 
-        /* Стили Магазина и Бизнеса */
-        #shop-view, #business-view { justify-content: flex-start; }
+        /* Стили Списков (Магазин, Бизнес, Рефералы) */
+        #shop-view, #business-view, #referrals-view { justify-content: flex-start; }
         .list-container { width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 10px; padding-bottom: 20px; }
         
         .card-item {
@@ -107,18 +107,70 @@
         }
         .action-btn:active { background: #0062cc; }
         .action-btn:disabled { background: #3a3a3c; color: #8e8e93; cursor: not-allowed; }
+        .action-btn.success-btn { background: #34c759; }
 
-        .business-header {
+        .header-box {
             width: 100%;
             max-width: 400px;
             background: #2c2c2e;
             border-radius: 12px;
-            padding: 12px;
+            padding: 14px;
             margin-bottom: 12px;
             text-align: center;
         }
-        .business-header h3 { font-size: 14px; color: #8e8e93; margin-bottom: 4px; }
-        .business-header .val { font-size: 18px; font-weight: bold; color: #34c759; }
+        .header-box h3 { font-size: 13px; color: #8e8e93; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .header-box .val { font-size: 20px; font-weight: bold; color: #ffd700; }
+
+        /* Стили Рефералов */
+        .ref-banner {
+            width: 100%;
+            max-width: 400px;
+            background: linear-gradient(135deg, #1c1c1e 0%, #2c2c2e 100%);
+            border: 1px solid #3a3a3c;
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        .ref-banner h2 { font-size: 18px; margin-bottom: 6px; }
+        .ref-banner p { font-size: 13px; color: #aaa; line-height: 1.4; }
+        .ref-bonus-highlight { color: #ffd700; font-weight: bold; }
+
+        .ref-stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            width: 100%;
+            max-width: 400px;
+            margin-bottom: 15px;
+        }
+        .stat-card {
+            background: #1c1c1e;
+            border: 1px solid #2c2c2e;
+            border-radius: 12px;
+            padding: 12px;
+            text-align: center;
+        }
+        .stat-card .title { font-size: 11px; color: #8e8e93; margin-bottom: 4px; }
+        .stat-card .value { font-size: 16px; font-weight: bold; color: #fff; }
+
+        .ref-link-box {
+            width: 100%;
+            max-width: 400px;
+            display: flex;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+        .ref-input {
+            flex: 1;
+            background: #1c1c1e;
+            border: 1px solid #2c2c2e;
+            border-radius: 10px;
+            padding: 10px;
+            color: #8e8e93;
+            font-size: 12px;
+            outline: none;
+        }
 
         /* Заглушки */
         .placeholder-card {
@@ -191,9 +243,35 @@
 
         <!-- 2. Рефералы -->
         <div id="referrals-view" class="view">
-            <div class="placeholder-card">
-                <h2>👥 Рефералы</h2>
-                <p>Раздел в разработке</p>
+            <div class="ref-banner">
+                <h2>🤝 Приглашай друзей</h2>
+                <p>За каждого друга: <span class="ref-bonus-highlight">+10,000 💰</span></p>
+                <p>Плюс <span class="ref-bonus-highlight">10%</span> от всего их заработка!</p>
+            </div>
+
+            <div class="ref-stats-grid">
+                <div class="stat-card">
+                    <div class="title">Друзей приглашено</div>
+                    <div class="value" id="refCountVal">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="title">Доступно к сбору</div>
+                    <div class="value" style="color: #34c759;" id="refAvailableVal">0 💰</div>
+                </div>
+            </div>
+
+            <div class="ref-link-box">
+                <input type="text" class="ref-input" id="refLinkInput" readonly value="Загрузка ссылки...">
+                <button class="action-btn" onclick="copyRefLink()">Копировать</button>
+            </div>
+
+            <button class="action-btn success-btn" id="claimRefBtn" style="width: 100%; max-width: 400px; padding: 12px; font-size: 14px; margin: 0 0 15px 0;" onclick="claimRefReward()" disabled>
+                Забрать бонус
+            </button>
+
+            <div class="list-container" id="refListContainer">
+                <h3 style="font-size: 14px; color: #8e8e93; margin-bottom: 5px;">Ваши рефералы:</h3>
+                <div id="refList">Загрузка...</div>
             </div>
         </div>
 
@@ -205,14 +283,14 @@
             </div>
         </div>
 
-        <!-- 4. Добавить бизнес -->
+        <!-- 4. Бизнес -->
         <div id="business-view" class="view">
-            <div class="business-header">
+            <div class="header-box">
                 <h3>Пассивный доход</h3>
                 <div class="val"><span id="totalPassiveIncome">0</span> / 10,000 💰/день</div>
             </div>
             <div class="list-container" id="businessList">
-                <!-- 10 бизнесов будут сгенерированы скриптом -->
+                <!-- 10 бизнесов -->
             </div>
         </div>
 
@@ -253,10 +331,12 @@
     <script>
         const SUPABASE_URL = 'https://bgrvgzgqtryudztngkqm.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_bKa8iusANSHGJ3KEgS8nJg_3TxrJdmZ';
+        
+        // ⚠️ ЗАМЕНИТЕ НА ЮЗЕРНЕЙМ ВАШЕГО БОТА (БЕЗ @)
+        const BOT_USERNAME = 'your_bot_username'; 
 
-        const MAX_DAILY_INCOME = 10000; // ЖЕСТКИЙ ЛИМИТ ПАССИВАВ В ДЕНЬ
+        const MAX_DAILY_INCOME = 10000;
 
-        // Список 10 Бизнесов
         const BUSINESS_DATA = [
             { id: 1, name: "Ларёк спортпита", icon: "🥤", baseCost: 200, incomePerDay: 100 },
             { id: 2, name: "Кофейня у зала", icon: "☕", baseCost: 500, incomePerDay: 250 },
@@ -283,9 +363,13 @@
         const scoreDisplay = document.getElementById('score');
 
         let score = 0;
+        let totalEarned = 0;
         let clickPower = 1;
-        let userBusinesses = {}; // { 1: level, 2: level }
+        let userBusinesses = {};
         let lastClaimTime = new Date();
+        let refClaimed = 0;
+        let availableRefBonus = 0;
+
         let saveTimeout = null;
         let db = null;
 
@@ -301,6 +385,10 @@
             document.getElementById(viewName + '-view').classList.add('active');
             btnEl.classList.add('active');
 
+            if (viewName === 'referrals') {
+                loadReferralsData();
+            }
+
             if (tg.HapticFeedback) tg.HapticFeedback.selectionChanged();
         }
 
@@ -309,7 +397,12 @@
             statusEl.className = isError ? 'status-text error' : 'status-text';
         }
 
-        // Подсчет общего пассивного дохода в день
+        function addEarnings(amount) {
+            score += amount;
+            totalEarned += amount;
+            scoreDisplay.innerText = score.toLocaleString();
+        }
+
         function getTotalPassiveIncomePerDay() {
             let total = 0;
             BUSINESS_DATA.forEach(b => {
@@ -319,7 +412,6 @@
             return total;
         }
 
-        // Сбор оффлайн-дохода
         function processPassiveIncome() {
             const totalDaily = getTotalPassiveIncomePerDay();
             if (totalDaily <= 0) return;
@@ -327,13 +419,12 @@
             const now = new Date();
             const elapsedSeconds = (now - new Date(lastClaimTime)) / 1000;
 
-            if (elapsedSeconds > 5) { // Начисляем, если прошло хотя бы 5 секунд
-                const incomePerSecond = totalDaily / 86400; // 86400 сек в сутках
+            if (elapsedSeconds > 5) {
+                const incomePerSecond = totalDaily / 86400;
                 const earned = Math.floor(elapsedSeconds * incomePerSecond);
 
                 if (earned > 0) {
-                    score += earned;
-                    scoreDisplay.innerText = score.toLocaleString();
+                    addEarnings(earned);
                     lastClaimTime = now;
                     if (tg.showAlert) tg.showAlert(`Пассивный доход: +${earned.toLocaleString()} 💰`);
                 }
@@ -349,7 +440,6 @@
 
             BUSINESS_DATA.forEach(b => {
                 const level = userBusinesses[b.id] || 0;
-                // Формула цены: базовая * (1.3 ^ уровень)
                 const cost = Math.floor(b.baseCost * Math.pow(1.3, level));
                 const nextIncome = totalDaily + b.incomePerDay;
                 const isCapped = nextIncome > MAX_DAILY_INCOME;
@@ -412,39 +502,153 @@
             }
         }
 
+        // --- ЛОГИКА РЕФЕРАЛОВ ---
+
+        function setupRefLink() {
+            const link = `https://t.me/${BOT_USERNAME}?start=ref_${userId}`;
+            document.getElementById('refLinkInput').value = link;
+        }
+
+        function copyRefLink() {
+            const input = document.getElementById('refLinkInput');
+            input.select();
+            document.execCommand('copy');
+            if (tg.showAlert) tg.showAlert("Ссылка скопирована!");
+            else alert("Ссылка скопирована!");
+        }
+
+        async function loadReferralsData() {
+            if (!db) return;
+            const refListEl = document.getElementById('refList');
+            refListEl.innerHTML = '<p style="color:#8e8e93; font-size:12px;">Загрузка списка...</p>';
+
+            try {
+                // Получаем список пользователей, у которых referrer_id равен нашему ID
+                const { data: refs, error } = await db
+                    .from('users')
+                    .select('username, total_earned')
+                    .eq('referrer_id', userId);
+
+                if (error) throw error;
+
+                const count = refs ? refs.length : 0;
+                document.getElementById('refCountVal').innerText = count;
+
+                let totalRefEarnings = 0;
+                refListEl.innerHTML = '';
+
+                if (count === 0) {
+                    refListEl.innerHTML = '<p style="color:#8e8e93; font-size:12px;">У вас пока нет рефералов.</p>';
+                } else {
+                    refs.forEach(r => {
+                        const earnedByRef = r.total_earned || 0;
+                        totalRefEarnings += earnedByRef;
+
+                        const item = document.createElement('div');
+                        item.className = 'card-item';
+                        item.style.marginBottom = '6px';
+                        item.innerHTML = `
+                            <div class="card-info">
+                                <h3>👤 ${r.username || 'Игрок'}</h3>
+                                <p>Заработал: ${earnedByRef.toLocaleString()} 💰</p>
+                            </div>
+                            <div style="color:#34c759; font-weight:bold; font-size:12px;">
+                                +${Math.floor(earnedByRef * 0.1).toLocaleString()} 💰 (10%)
+                            </div>
+                        `;
+                        refListEl.appendChild(item);
+                    });
+                }
+
+                // Расчет бонуса: (кол-во рефералов * 10,000) + (10% от их дохода) - уже забранное
+                const totalBonusGenerated = (count * 10000) + Math.floor(totalRefEarnings * 0.1);
+                availableRefBonus = Math.max(0, totalBonusGenerated - refClaimed);
+
+                document.getElementById('refAvailableVal').innerText = `${availableRefBonus.toLocaleString()} 💰`;
+
+                const claimBtn = document.getElementById('claimRefBtn');
+                if (availableRefBonus > 0) {
+                    claimBtn.disabled = false;
+                    claimBtn.innerText = `Забрать ${availableRefBonus.toLocaleString()} 💰`;
+                } else {
+                    claimBtn.disabled = true;
+                    claimBtn.innerText = `Забрать бонус`;
+                }
+
+            } catch (err) {
+                console.error("Ошибка загрузки рефералов:", err);
+            }
+        }
+
+        async function claimRefReward() {
+            if (availableRefBonus <= 0) return;
+
+            addEarnings(availableRefBonus);
+            refClaimed += availableRefBonus;
+            availableRefBonus = 0;
+
+            if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+            if (tg.showAlert) tg.showAlert("Бонус успешно зачислен!");
+
+            await forceSave();
+            loadReferralsData();
+        }
+
+        // --- ЗАГРУЗКА И СОХРАНЕНИЕ ---
+
         async function loadUserData() {
             if (!db) return;
             showStatus("Подключение...");
 
             try {
-                let { data: user, error } = await db.from('users').select('balance, click_power, businesses, last_claim').eq('telegram_id', userId).maybeSingle();
+                let { data: user, error } = await db.from('users').select('*').eq('telegram_id', userId).maybeSingle();
 
                 if (error) throw error;
 
                 if (!user) {
+                    // Проверяем реферальный параметр из ссылки (start_param)
+                    let startParam = tg.initDataUnsafe?.start_param;
+                    let refId = null;
+
+                    if (startParam && startParam.startsWith('ref_')) {
+                        let parsedId = parseInt(startParam.replace('ref_', ''));
+                        if (!isNaN(parsedId) && parsedId !== userId) {
+                            refId = parsedId;
+                        }
+                    }
+
                     let { error: insertErr } = await db.from('users').insert([{ 
                         telegram_id: userId, 
                         username: userName, 
                         balance: 0, 
+                        total_earned: 0,
                         click_power: 1,
                         businesses: {},
-                        last_claim: new Date()
+                        last_claim: new Date(),
+                        referrer_id: refId,
+                        ref_claimed: 0
                     }]);
+
                     if (insertErr) throw insertErr;
                     score = 0;
+                    totalEarned = 0;
                     clickPower = 1;
                     userBusinesses = {};
                     lastClaimTime = new Date();
+                    refClaimed = 0;
                 } else {
                     score = user.balance || 0;
+                    totalEarned = user.total_earned || score;
                     clickPower = user.click_power || 1;
                     userBusinesses = user.businesses || {};
                     lastClaimTime = user.last_claim ? new Date(user.last_claim) : new Date();
+                    refClaimed = user.ref_claimed || 0;
                 }
 
                 scoreDisplay.innerText = score.toLocaleString();
+                setupRefLink();
                 updateShopUI();
-                processPassiveIncome(); // Сбор за время отсутствия
+                processPassiveIncome();
                 renderBusinesses();
                 showStatus("Сохранено");
             } catch (err) {
@@ -459,9 +663,11 @@
                 showStatus("Сохранение...");
                 let { error } = await db.from('users').update({ 
                     balance: score, 
+                    total_earned: totalEarned,
                     click_power: clickPower,
                     businesses: userBusinesses,
-                    last_claim: lastClaimTime
+                    last_claim: lastClaimTime,
+                    ref_claimed: refClaimed
                 }).eq('telegram_id', userId);
 
                 if (error) throw error;
@@ -499,8 +705,7 @@
         }
 
         document.getElementById('coinBtn').addEventListener('click', () => {
-            score += clickPower;
-            scoreDisplay.innerText = score.toLocaleString();
+            addEarnings(clickPower);
 
             if (tg.HapticFeedback) {
                 tg.HapticFeedback.impactOccurred('light');
