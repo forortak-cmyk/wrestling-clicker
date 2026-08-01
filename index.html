@@ -713,64 +713,8 @@
             }
         });
 
-        async function loadUserData() {
-            if (!db) return;
-            showStatus("Подключение...");
-
-            try {
-                let { data: user, error } = await db.from('users').select('*').eq('telegram_id', userId).maybeSingle();
-
-                if (error) throw error;
-
-                if (!user) {
-                    // АВТО-ЛОВУШКА РЕФЕРАЛА ИЗ ССЫЛКИ БРАУЗЕРА
-                    let urlParams = new URLSearchParams(window.location.search);
-                    let startParam = urlParams.get('startapp') || tg.initDataUnsafe?.start_param;
-                    let refId = null;
-
-                    if (startParam && startParam.startsWith('ref_')) {
-                        let parsedId = parseInt(startParam.replace('ref_', ''));
-                        if (!isNaN(parsedId) && parsedId !== userId) {
-                            refId = parsedId;
-                        }
-                    }
-
-                    let { error: insertErr } = await db.from('users').insert([{ 
-                        telegram_id: userId, 
-                        username: userName, 
-                        balance: 0, 
-                        total_earned: 0,
-                        click_power: 1,
-                        businesses: {},
-                        last_claim: new Date(),
-                        referrer_id: refId,
-                        ref_claimed: 0
-                    }]);
-
-                    if (insertErr) throw insertErr;
-                    score = 0;
-                    totalEarned = 0;
-                    clickPower = 1;
-                    userBusinesses = {};
-                    lastClaimTime = new Date();
-                    refClaimed = 0;
-                } else {
-                    score = user.balance || 0;
-                    totalEarned = user.total_earned || score;
-                    clickPower = user.click_power || 1;
-                    userBusinesses = user.businesses || {};
-                    lastClaimTime = user.last_claim ? new Date(user.last_claim) : new Date();
-                    refClaimed = user.ref_claimed || 0;
-                }
-
-                scoreDisplay.innerText = score.toLocaleString();
-                setupRefLink();
-                updateShopUI();
-                processPassiveIncome();
-                renderBusinesses();
-                showStatus("Сохранено");
-            } catch (err) {
-                console.error("Ошибка загрузки:", err);
-                showStatus("Ошибка БД", true);
-            }
-        }
+        loadUserData();
+    </script>
+</body>
+</html>
+Обнови файл index.
