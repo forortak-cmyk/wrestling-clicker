@@ -19,29 +19,48 @@
             -webkit-user-select: none;
         }
 
+        /* Шапка */
         .header {
-            padding: 20px 15px;
+            padding: 15px 10px 10px;
             text-align: center;
             background: #1c1c1e;
             border-bottom: 1px solid #2c2c2e;
+            flex-shrink: 0;
         }
-        .user-name { font-size: 14px; color: #8e8e93; margin-bottom: 4px; }
-        .balance-box { font-size: 36px; font-weight: 800; color: #ffd700; }
-        .status-text { font-size: 12px; color: #34c759; margin-top: 4px; min-height: 16px; }
+        .user-name { font-size: 13px; color: #8e8e93; margin-bottom: 2px; }
+        .balance-box { font-size: 32px; font-weight: 800; color: #ffd700; }
+        .status-text { font-size: 11px; color: #34c759; margin-top: 2px; min-height: 15px; }
         .status-text.error { color: #ff3b30; }
 
-        .main {
+        /* Контейнер Экранов */
+        .content {
             flex: 1;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            overflow-y: auto;
+            position: relative;
         }
+
+        .view {
+            display: none;
+            width: 100%;
+            height: 100%;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .view.active {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Экран: Главная (Кликер) */
         .coin {
-            width: 220px;
-            height: 220px;
+            width: 210px;
+            height: 210px;
             background: radial-gradient(circle at 30% 30%, #ffe066, #e6a100 70%, #996b00);
             border-radius: 50%;
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
             font-size: 26px;
@@ -53,15 +72,75 @@
             -webkit-tap-highlight-color: transparent;
         }
         .coin:active { transform: scale(0.92); }
+        .coin-sub { font-size: 12px; font-weight: bold; margin-top: 5px; opacity: 0.8; }
 
-        .footer {
-            padding: 12px;
+        /* Стили Магазина */
+        #shop-view { justify-content: flex-start; }
+        .shop-container { width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 12px; }
+        .shop-card {
+            background: #1c1c1e;
+            border: 1px solid #2c2c2e;
+            border-radius: 14px;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .shop-info h3 { font-size: 16px; margin-bottom: 4px; color: #fff; }
+        .shop-info p { font-size: 13px; color: #8e8e93; }
+        .shop-btn {
+            background: #0a84ff;
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 10px;
+            font-weight: bold;
+            font-size: 13px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .shop-btn:active { background: #0062cc; }
+        .shop-btn:disabled { background: #3a3a3c; color: #8e8e93; cursor: not-allowed; }
+
+        /* Заглушки для других экранов */
+        .placeholder-card {
+            background: #1c1c1e;
+            border: 1px solid #2c2c2e;
+            border-radius: 16px;
+            padding: 25px 15px;
+            text-align: center;
+            width: 100%;
+            max-width: 320px;
+        }
+        .placeholder-card h2 { margin-bottom: 10px; font-size: 20px; }
+        .placeholder-card p { color: #8e8e93; font-size: 14px; }
+
+        /* Нижнее Навигационное Меню */
+        .nav-bar {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
             background: #1c1c1e;
             border-top: 1px solid #2c2c2e;
-            text-align: center;
-            font-size: 12px;
-            color: #636366;
+            padding: 8px 4px 12px;
+            flex-shrink: 0;
         }
+        .nav-btn {
+            background: none;
+            border: none;
+            color: #8e8e93;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            cursor: pointer;
+            width: 20%;
+            gap: 4px;
+            transition: color 0.2s;
+        }
+        .nav-btn .icon { font-size: 20px; }
+        .nav-btn.active { color: #0a84ff; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -72,12 +151,78 @@
         <div class="status-text" id="status">Загрузка данных...</div>
     </div>
 
-    <div class="main">
-        <div class="coin" id="coinBtn">ТАПАЙ</div>
+    <div class="content">
+
+        <!-- 1. Магазин -->
+        <div id="shop-view" class="view">
+            <h2 style="margin-bottom: 15px; font-size: 18px;">🛒 Магазин прокачки</h2>
+            <div class="shop-container">
+                <div class="shop-card">
+                    <div class="shop-info">
+                        <h3>Борцовский хват</h3>
+                        <p>Сила тапа: <span id="currentPower">1</span> / 1000</p>
+                        <p style="color: #ffd700; margin-top: 4px;" id="upgradeCost">Цена: 100 💰</p>
+                    </div>
+                    <button class="shop-btn" id="buyPowerBtn" onclick="buyClickPower()">Купить</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. Рефералы -->
+        <div id="referrals-view" class="view">
+            <div class="placeholder-card">
+                <h2>👥 Рефералы</h2>
+                <p>Раздел в разработке</p>
+            </div>
+        </div>
+
+        <!-- 3. Главная (Кликер) -->
+        <div id="main-view" class="view active">
+            <div class="coin" id="coinBtn">
+                <span>ТАПАЙ</span>
+                <span class="coin-sub" id="powerLabel">+1 за тап</span>
+            </div>
+        </div>
+
+        <!-- 4. Бизнес -->
+        <div id="business-view" class="view">
+            <div class="placeholder-card">
+                <h2>💼 Бизнес</h2>
+                <p>Раздел в разработке</p>
+            </div>
+        </div>
+
+        <!-- 5. Аккаунт -->
+        <div id="account-view" class="view">
+            <div class="placeholder-card">
+                <h2>👤 Профиль</h2>
+                <p>Раздел в разработке</p>
+            </div>
+        </div>
+
     </div>
 
-    <div class="footer">
-        Wrestling Clicker v1.1
+    <div class="nav-bar">
+        <button class="nav-btn" onclick="switchView('shop', this)">
+            <span class="icon">🛒</span>
+            <span>Магазин</span>
+        </button>
+        <button class="nav-btn" onclick="switchView('referrals', this)">
+            <span class="icon">👥</span>
+            <span>Рефералы</span>
+        </button>
+        <button class="nav-btn active" onclick="switchView('main', this)">
+            <span class="icon">🪙</span>
+            <span>Главная</span>
+        </button>
+        <button class="nav-btn" onclick="switchView('business', this)">
+            <span class="icon">💼</span>
+            <span>Бизнес</span>
+        </button>
+        <button class="nav-btn" onclick="switchView('account', this)">
+            <span class="icon">👤</span>
+            <span>Аккаунт</span>
+        </button>
     </div>
 
     <script>
@@ -95,15 +240,29 @@
         document.getElementById('username').innerText = userName;
         const statusEl = document.getElementById('status');
         const scoreDisplay = document.getElementById('score');
+        const currentPowerEl = document.getElementById('currentPower');
+        const powerLabelEl = document.getElementById('powerLabel');
+        const upgradeCostEl = document.getElementById('upgradeCost');
+        const buyPowerBtn = document.getElementById('buyPowerBtn');
 
         let score = 0;
+        let clickPower = 1;
         let saveTimeout = null;
         let db = null;
 
         try {
             db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         } catch (e) {
-            showStatus("Ошибка инициализации БД", true);
+            showStatus("Ошибка БД", true);
+        }
+
+        function switchView(viewName, btnEl) {
+            document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById(viewName + '-view').classList.add('active');
+            btnEl.classList.add('active');
+
+            if (tg.HapticFeedback) tg.HapticFeedback.selectionChanged();
         }
 
         function showStatus(text, isError = false) {
@@ -111,38 +270,57 @@
             statusEl.className = isError ? 'status-text error' : 'status-text';
         }
 
-        // Загрузка юзера
+        // Вычисление стоимости следующего уровня (например: сила * 100 монет)
+        function getUpgradeCost() {
+            return clickPower * 100;
+        }
+
+        function updateShopUI() {
+            currentPowerEl.innerText = clickPower;
+            powerLabelEl.innerText = `+${clickPower} за тап`;
+
+            if (clickPower >= 1000) {
+                upgradeCostEl.innerText = "Максимум достигнут!";
+                buyPowerBtn.innerText = "МАКС";
+                buyPowerBtn.disabled = true;
+            } else {
+                upgradeCostEl.innerText = `Цена: ${getUpgradeCost().toLocaleString()} 💰`;
+                buyPowerBtn.disabled = false;
+            }
+        }
+
         async function loadUserData() {
             if (!db) return;
             showStatus("Подключение...");
 
             try {
-                let { data: user, error } = await db.from('users').select('balance').eq('telegram_id', userId).maybeSingle();
+                let { data: user, error } = await db.from('users').select('balance, click_power').eq('telegram_id', userId).maybeSingle();
 
                 if (error) throw error;
 
                 if (!user) {
-                    // Создаем нового
-                    let { error: insertErr } = await db.from('users').insert([{ telegram_id: userId, username: userName, balance: 0 }]);
+                    let { error: insertErr } = await db.from('users').insert([{ telegram_id: userId, username: userName, balance: 0, click_power: 1 }]);
                     if (insertErr) throw insertErr;
                     score = 0;
+                    clickPower = 1;
                 } else {
                     score = user.balance || 0;
+                    clickPower = user.click_power || 1;
                 }
                 scoreDisplay.innerText = score.toLocaleString();
-                showStatus("Готово к игре");
+                updateShopUI();
+                showStatus("Сохранено");
             } catch (err) {
                 console.error("Ошибка загрузки:", err);
-                showStatus("Ошибка БД: " + (err.message || "Нет доступа"), true);
+                showStatus("Ошибка БД", true);
             }
         }
 
-        // Сохранение
         async function forceSave() {
             if (!db) return;
             try {
                 showStatus("Сохранение...");
-                let { error } = await db.from('users').update({ balance: score }).eq('telegram_id', userId);
+                let { error } = await db.from('users').update({ balance: score, click_power: clickPower }).eq('telegram_id', userId);
                 if (error) throw error;
                 showStatus("Сохранено!");
             } catch (err) {
@@ -154,12 +332,35 @@
         function saveDebounced() {
             showStatus("Есть изменения...");
             clearTimeout(saveTimeout);
-            saveTimeout = setTimeout(forceSave, 300); // 300 мс задержка
+            saveTimeout = setTimeout(forceSave, 300);
         }
 
-        // Клик
+        // Покупка прокачки клика
+        async function buyClickPower() {
+            if (clickPower >= 1000) return;
+            const cost = getUpgradeCost();
+
+            if (score < cost) {
+                if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
+                alert("Недостаточно монет!");
+                return;
+            }
+
+            score -= cost;
+            clickPower++;
+
+            scoreDisplay.innerText = score.toLocaleString();
+            updateShopUI();
+
+            if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+
+            // Сразу сохраняем покупку в базу
+            await forceSave();
+        }
+
+        // Клик по монете
         document.getElementById('coinBtn').addEventListener('click', () => {
-            score++;
+            score += clickPower;
             scoreDisplay.innerText = score.toLocaleString();
 
             if (tg.HapticFeedback) {
@@ -169,7 +370,6 @@
             saveDebounced();
         });
 
-        // Сохранение при закрытии/сворачивании
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'hidden') {
                 forceSave();
