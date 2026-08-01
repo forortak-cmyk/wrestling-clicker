@@ -43,17 +43,17 @@
             display: none;
             width: 100%;
             height: 100%;
-            padding: 20px;
+            padding: 15px;
             box-sizing: border-box;
         }
         .view.active {
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
         }
 
-        /* Экран: Главная (Кликер) */
+        /* Экран 3: Главная (Кликер) */
+        #main-view { justify-content: center; }
         .coin {
             width: 210px;
             height: 210px;
@@ -74,35 +74,53 @@
         .coin:active { transform: scale(0.92); }
         .coin-sub { font-size: 12px; font-weight: bold; margin-top: 5px; opacity: 0.8; }
 
-        /* Стили Магазина */
-        #shop-view { justify-content: flex-start; }
-        .shop-container { width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 12px; }
-        .shop-card {
+        /* Стили Магазина и Бизнеса */
+        #shop-view, #business-view { justify-content: flex-start; }
+        .list-container { width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 10px; padding-bottom: 20px; }
+        
+        .card-item {
             background: #1c1c1e;
             border: 1px solid #2c2c2e;
             border-radius: 14px;
-            padding: 15px;
+            padding: 12px 15px;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
-        .shop-info h3 { font-size: 16px; margin-bottom: 4px; color: #fff; }
-        .shop-info p { font-size: 13px; color: #8e8e93; }
-        .shop-btn {
+        .card-info { flex: 1; }
+        .card-info h3 { font-size: 15px; margin-bottom: 2px; color: #fff; }
+        .card-info p { font-size: 12px; color: #8e8e93; }
+        .card-info .income { color: #34c759; font-weight: 600; }
+        .card-info .cost { color: #ffd700; margin-top: 2px; }
+
+        .action-btn {
             background: #0a84ff;
             color: white;
             border: none;
-            padding: 10px 16px;
-            border-radius: 10px;
+            padding: 8px 14px;
+            border-radius: 8px;
             font-weight: bold;
-            font-size: 13px;
+            font-size: 12px;
             cursor: pointer;
             transition: background 0.2s;
+            margin-left: 10px;
         }
-        .shop-btn:active { background: #0062cc; }
-        .shop-btn:disabled { background: #3a3a3c; color: #8e8e93; cursor: not-allowed; }
+        .action-btn:active { background: #0062cc; }
+        .action-btn:disabled { background: #3a3a3c; color: #8e8e93; cursor: not-allowed; }
 
-        /* Заглушки для других экранов */
+        .business-header {
+            width: 100%;
+            max-width: 400px;
+            background: #2c2c2e;
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 12px;
+            text-align: center;
+        }
+        .business-header h3 { font-size: 14px; color: #8e8e93; margin-bottom: 4px; }
+        .business-header .val { font-size: 18px; font-weight: bold; color: #34c759; }
+
+        /* Заглушки */
         .placeholder-card {
             background: #1c1c1e;
             border: 1px solid #2c2c2e;
@@ -111,6 +129,7 @@
             text-align: center;
             width: 100%;
             max-width: 320px;
+            margin-top: 40px;
         }
         .placeholder-card h2 { margin-bottom: 10px; font-size: 20px; }
         .placeholder-card p { color: #8e8e93; font-size: 14px; }
@@ -145,25 +164,27 @@
 </head>
 <body>
 
+    <!-- Единая шапка -->
     <div class="header">
         <div class="user-name" id="username">Подключение...</div>
         <div class="balance-box"><span id="score">0</span> 💰</div>
         <div class="status-text" id="status">Загрузка данных...</div>
     </div>
 
+    <!-- Область контента -->
     <div class="content">
 
         <!-- 1. Магазин -->
         <div id="shop-view" class="view">
-            <h2 style="margin-bottom: 15px; font-size: 18px;">🛒 Магазин прокачки</h2>
-            <div class="shop-container">
-                <div class="shop-card">
-                    <div class="shop-info">
+            <h2 style="margin-bottom: 12px; font-size: 18px;">🛒 Магазин прокачки</h2>
+            <div class="list-container">
+                <div class="card-item">
+                    <div class="card-info">
                         <h3>Борцовский хват</h3>
                         <p>Сила тапа: <span id="currentPower">1</span> / 1000</p>
-                        <p style="color: #ffd700; margin-top: 4px;" id="upgradeCost">Цена: 100 💰</p>
+                        <p class="cost" id="upgradeCost">Цена: 100 💰</p>
                     </div>
-                    <button class="shop-btn" id="buyPowerBtn" onclick="buyClickPower()">Купить</button>
+                    <button class="action-btn" id="buyPowerBtn" onclick="buyClickPower()">Купить</button>
                 </div>
             </div>
         </div>
@@ -184,11 +205,14 @@
             </div>
         </div>
 
-        <!-- 4. Бизнес -->
+        <!-- 4. Добавить бизнес -->
         <div id="business-view" class="view">
-            <div class="placeholder-card">
-                <h2>💼 Бизнес</h2>
-                <p>Раздел в разработке</p>
+            <div class="business-header">
+                <h3>Пассивный доход</h3>
+                <div class="val"><span id="totalPassiveIncome">0</span> / 10,000 💰/день</div>
+            </div>
+            <div class="list-container" id="businessList">
+                <!-- 10 бизнесов будут сгенерированы скриптом -->
             </div>
         </div>
 
@@ -202,6 +226,7 @@
 
     </div>
 
+    <!-- Нижнее меню -->
     <div class="nav-bar">
         <button class="nav-btn" onclick="switchView('shop', this)">
             <span class="icon">🛒</span>
@@ -229,6 +254,22 @@
         const SUPABASE_URL = 'https://bgrvgzgqtryudztngkqm.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_bKa8iusANSHGJ3KEgS8nJg_3TxrJdmZ';
 
+        const MAX_DAILY_INCOME = 10000; // ЖЕСТКИЙ ЛИМИТ ПАССИВАВ В ДЕНЬ
+
+        // Список 10 Бизнесов
+        const BUSINESS_DATA = [
+            { id: 1, name: "Ларёк спортпита", icon: "🥤", baseCost: 200, incomePerDay: 100 },
+            { id: 2, name: "Кофейня у зала", icon: "☕", baseCost: 500, incomePerDay: 250 },
+            { id: 3, name: "Будка с мороженым", icon: "🍦", baseCost: 1000, incomePerDay: 500 },
+            { id: 4, name: "Районный зал", icon: "🏋️", baseCost: 2000, incomePerDay: 800 },
+            { id: 5, name: "Магазин экипировки", icon: "👕", baseCost: 4000, incomePerDay: 1200 },
+            { id: 6, name: "Борцовский клуб", icon: "🥊", baseCost: 7000, incomePerDay: 1600 },
+            { id: 7, name: "Спортивный блог", icon: "📺", baseCost: 10000, incomePerDay: 2000 },
+            { id: 8, name: "Арена спаррингов", icon: "🏟️", baseCost: 15000, incomePerDay: 2400 },
+            { id: 9, name: "Турнирный центр", icon: "🏆", baseCost: 22000, incomePerDay: 3000 },
+            { id: 10, name: "Фитнес-империя", icon: "🏢", baseCost: 35000, incomePerDay: 4000 }
+        ];
+
         const tg = window.Telegram.WebApp;
         tg.expand();
         tg.ready();
@@ -240,13 +281,11 @@
         document.getElementById('username').innerText = userName;
         const statusEl = document.getElementById('status');
         const scoreDisplay = document.getElementById('score');
-        const currentPowerEl = document.getElementById('currentPower');
-        const powerLabelEl = document.getElementById('powerLabel');
-        const upgradeCostEl = document.getElementById('upgradeCost');
-        const buyPowerBtn = document.getElementById('buyPowerBtn');
 
         let score = 0;
         let clickPower = 1;
+        let userBusinesses = {}; // { 1: level, 2: level }
+        let lastClaimTime = new Date();
         let saveTimeout = null;
         let db = null;
 
@@ -270,21 +309,105 @@
             statusEl.className = isError ? 'status-text error' : 'status-text';
         }
 
-        // Вычисление стоимости следующего уровня (например: сила * 100 монет)
-        function getUpgradeCost() {
-            return clickPower * 100;
+        // Подсчет общего пассивного дохода в день
+        function getTotalPassiveIncomePerDay() {
+            let total = 0;
+            BUSINESS_DATA.forEach(b => {
+                const level = userBusinesses[b.id] || 0;
+                total += level * b.incomePerDay;
+            });
+            return total;
+        }
+
+        // Сбор оффлайн-дохода
+        function processPassiveIncome() {
+            const totalDaily = getTotalPassiveIncomePerDay();
+            if (totalDaily <= 0) return;
+
+            const now = new Date();
+            const elapsedSeconds = (now - new Date(lastClaimTime)) / 1000;
+
+            if (elapsedSeconds > 5) { // Начисляем, если прошло хотя бы 5 секунд
+                const incomePerSecond = totalDaily / 86400; // 86400 сек в сутках
+                const earned = Math.floor(elapsedSeconds * incomePerSecond);
+
+                if (earned > 0) {
+                    score += earned;
+                    scoreDisplay.innerText = score.toLocaleString();
+                    lastClaimTime = now;
+                    if (tg.showAlert) tg.showAlert(`Пассивный доход: +${earned.toLocaleString()} 💰`);
+                }
+            }
+        }
+
+        function renderBusinesses() {
+            const listEl = document.getElementById('businessList');
+            const totalDaily = getTotalPassiveIncomePerDay();
+            document.getElementById('totalPassiveIncome').innerText = totalDaily.toLocaleString();
+
+            listEl.innerHTML = '';
+
+            BUSINESS_DATA.forEach(b => {
+                const level = userBusinesses[b.id] || 0;
+                // Формула цены: базовая * (1.3 ^ уровень)
+                const cost = Math.floor(b.baseCost * Math.pow(1.3, level));
+                const nextIncome = totalDaily + b.incomePerDay;
+                const isCapped = nextIncome > MAX_DAILY_INCOME;
+
+                const card = document.createElement('div');
+                card.className = 'card-item';
+                card.innerHTML = `
+                    <div class="card-info">
+                        <h3>${b.icon} ${b.name} <span style="color:#8e8e93; font-size:12px;">[Ур. ${level}]</span></h3>
+                        <p class="income">+${b.incomePerDay.toLocaleString()} 💰/день</p>
+                        <p class="cost">${isCapped ? 'Достигнут лимит 10к' : 'Цена: ' + cost.toLocaleString() + ' 💰'}</p>
+                    </div>
+                    <button class="action-btn" ${isCapped ? 'disabled' : ''} onclick="buyBusiness(${b.id}, ${cost})">
+                        Улучшить
+                    </button>
+                `;
+                listEl.appendChild(card);
+            });
+        }
+
+        async function buyBusiness(bId, cost) {
+            const b = BUSINESS_DATA.find(x => x.id === bId);
+            const totalDaily = getTotalPassiveIncomePerDay();
+
+            if (totalDaily + b.incomePerDay > MAX_DAILY_INCOME) {
+                alert("Достигнут максимальный лимит пассивного дохода (10,000 💰/день)!");
+                return;
+            }
+
+            if (score < cost) {
+                if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
+                alert("Недостаточно монет!");
+                return;
+            }
+
+            score -= cost;
+            userBusinesses[bId] = (userBusinesses[bId] || 0) + 1;
+
+            scoreDisplay.innerText = score.toLocaleString();
+            renderBusinesses();
+
+            if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+            await forceSave();
         }
 
         function updateShopUI() {
-            currentPowerEl.innerText = clickPower;
-            powerLabelEl.innerText = `+${clickPower} за тап`;
+            document.getElementById('currentPower').innerText = clickPower;
+            document.getElementById('powerLabel').innerText = `+${clickPower} за тап`;
+
+            const upgradeCostEl = document.getElementById('upgradeCost');
+            const buyPowerBtn = document.getElementById('buyPowerBtn');
 
             if (clickPower >= 1000) {
                 upgradeCostEl.innerText = "Максимум достигнут!";
                 buyPowerBtn.innerText = "МАКС";
                 buyPowerBtn.disabled = true;
             } else {
-                upgradeCostEl.innerText = `Цена: ${getUpgradeCost().toLocaleString()} 💰`;
+                upgradeCostEl.innerText = `Цена: ${(clickPower * 100).toLocaleString()} 💰`;
                 buyPowerBtn.disabled = false;
             }
         }
@@ -294,21 +417,35 @@
             showStatus("Подключение...");
 
             try {
-                let { data: user, error } = await db.from('users').select('balance, click_power').eq('telegram_id', userId).maybeSingle();
+                let { data: user, error } = await db.from('users').select('balance, click_power, businesses, last_claim').eq('telegram_id', userId).maybeSingle();
 
                 if (error) throw error;
 
                 if (!user) {
-                    let { error: insertErr } = await db.from('users').insert([{ telegram_id: userId, username: userName, balance: 0, click_power: 1 }]);
+                    let { error: insertErr } = await db.from('users').insert([{ 
+                        telegram_id: userId, 
+                        username: userName, 
+                        balance: 0, 
+                        click_power: 1,
+                        businesses: {},
+                        last_claim: new Date()
+                    }]);
                     if (insertErr) throw insertErr;
                     score = 0;
                     clickPower = 1;
+                    userBusinesses = {};
+                    lastClaimTime = new Date();
                 } else {
                     score = user.balance || 0;
                     clickPower = user.click_power || 1;
+                    userBusinesses = user.businesses || {};
+                    lastClaimTime = user.last_claim ? new Date(user.last_claim) : new Date();
                 }
+
                 scoreDisplay.innerText = score.toLocaleString();
                 updateShopUI();
+                processPassiveIncome(); // Сбор за время отсутствия
+                renderBusinesses();
                 showStatus("Сохранено");
             } catch (err) {
                 console.error("Ошибка загрузки:", err);
@@ -320,7 +457,13 @@
             if (!db) return;
             try {
                 showStatus("Сохранение...");
-                let { error } = await db.from('users').update({ balance: score, click_power: clickPower }).eq('telegram_id', userId);
+                let { error } = await db.from('users').update({ 
+                    balance: score, 
+                    click_power: clickPower,
+                    businesses: userBusinesses,
+                    last_claim: lastClaimTime
+                }).eq('telegram_id', userId);
+
                 if (error) throw error;
                 showStatus("Сохранено!");
             } catch (err) {
@@ -335,10 +478,9 @@
             saveTimeout = setTimeout(forceSave, 300);
         }
 
-        // Покупка прокачки клика
         async function buyClickPower() {
             if (clickPower >= 1000) return;
-            const cost = getUpgradeCost();
+            const cost = clickPower * 100;
 
             if (score < cost) {
                 if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
@@ -353,12 +495,9 @@
             updateShopUI();
 
             if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
-
-            // Сразу сохраняем покупку в базу
             await forceSave();
         }
 
-        // Клик по монете
         document.getElementById('coinBtn').addEventListener('click', () => {
             score += clickPower;
             scoreDisplay.innerText = score.toLocaleString();
