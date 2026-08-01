@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sponsor Clicker</title>
+    <!-- Telegram WebApp SDK -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <!-- Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body {
+            background-color: #151517;
+            color: #ffffff;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        /* Шапка с балансом */
+        .header {
+            padding: 25px 20px 15px;
+            text-align: center;
+            background: #1c1c1e;
+            border-bottom: 1px solid #2c2c2e;
+        }
+        .user-name { font-size: 14px; color: #8e8e93; margin-bottom: 5px; }
+        .balance-box { font-size: 38px; font-weight: 800; color: #ffd700; }
+
+        /* Игровая зона */
+        .main {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+        .coin {
+            width: 230px;
+            height: 230px;
+            background: radial-gradient(circle at 30% 30%, #ffe066, #e6a100 70%, #996b00);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 28px;
+            font-weight: 900;
+            color: #3d2b00;
+            text-shadow: 0 1px 2px rgba(255,255,255,0.4);
+            box-shadow: 0 12px 35px rgba(0,0,0,0.6), inset 0 6px 12px rgba(255,255,255,0.5);
+            cursor: pointer;
+            transition: transform 0.05s ease-out;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .coin:active { transform: scale(0.93); }
+
+        /* Футер */
+        .footer {
+            padding: 15px;
+            background: #1c1c1e;
+            border-top: 1px solid #2c2c2e;
+            text-align: center;
+            font-size: 12px;
+            color: #636366;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div class="user-name" id="username">Загрузка...</div>
+        <div class="balance-box"><span id="score">0</span> 💰</div>
+    </div>
+
+    <div class="main">
+        <div class="coin" id="coinBtn">ТАПАЙ</div>
+    </div>
+
+    <div class="footer">
+        Версия 1.0 • Sponsor Clicker
+    </div>
+
+    <script>
+        // ------------------------------------------------------------------
+        // Настройки Supabase (Сюда мы вставим ключи на Шаге 3)
+        // ------------------------------------------------------------------
+        const SUPABASE_URL = 'https://bgrvgzgqtryudztngkqm.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_bKa8iusANSHGJ3KEgS8nJg_3TxrJdmZ';
+
+        // Инициализация Telegram
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+        tg.ready();
+
+        const tgUser = tg.initDataUnsafe?.user;
+        const userId = tgUser ? tgUser.id : 999999; // Тестовый ID для браузера
+        const userName = tgUser ? tgUser.first_name : "Игрок (Браузер)";
+
+        document.getElementById('username').innerText = userName;
+
+        let score = 0;
+        let db = null;
+        let saveTimeout = null;
+
+        // Безопасное подключение к Supabase
+        if (SUPABASE_URL.startsWith('http')) {
+            db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        }
+
+        // Загрузка сохраненного баланса
+        async function loadUserData() {
+            if (!db) return; // Если ключи еще не вставлены, просто играем локально
+
+            try {
+                let { data: user, error } = await db.from('users').select('balance').eq('telegram_id', userId).maybeSingle();
+
+                if (!user) {
+                    // Новый игрок - создаем запись в БД
+                    await db.from('users').insert([{ telegram_id: userId, username: userName, balance: 0 }]);
+                    score = 0;
+                } else {
+                    // Возвращающийся игрок - подтягиваем баланс
+                    score = user.balance;
+                }
+                document.getElementById('score').innerText = score.toLocaleString();
+            } catch (err) {
+                console.error("Ошибка загрузки данных:", err);
+            }
+        }
+
+        // Авто-сохранение кликов (с задержкой в 1 секунду после последнего тапа)
+        function saveBalanceDebounced() {
+            if (!db) return;
+
+            clearTimeout(saveTimeout);
+            saveTimeout = setTimeout(async () => {
+                try {
+                    await db.from('users').update({ balance: score }).eq('telegram_id', userId);
+                    console.log('Баланс сохранен!');
+                } catch (err) {
+                    console.error("Ошибка сохранения:", err);
+                }
+            }, 1000);
+        }
+
+        // Обработка клика
+        const coinBtn = document.getElementById('coinBtn');
+        coinBtn.addEventListener('click', () => {
+            score++;
+            document.getElementById('score').innerText = score.toLocaleString();
+
+            // Вибрация на смартфоне
+            if (tg.HapticFeedback) {
+                tg.HapticFeedback.impactOccurred('light');
+            }
+
+            saveBalanceDebounced();
+        });
+
+        // Запуск
+        loadUserData();
+    </script>
+</body>
+</html>
