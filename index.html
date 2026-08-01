@@ -332,7 +332,6 @@
         const SUPABASE_URL = 'https://bgrvgzgqtryudztngkqm.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_bKa8iusANSHGJ3KEgS8nJg_3TxrJdmZ';
         
-        // 🔥 ВСТАВЛЕН ТВОЙ БОТ:
         const BOT_USERNAME = 'Wrestler_clicker_bot'; 
 
         const MAX_DAILY_INCOME = 10000;
@@ -600,7 +599,8 @@
                 if (error) throw error;
 
                 if (!user) {
-                    let startParam = tg.initDataUnsafe?.start_param;
+                    let urlParams = new URLSearchParams(window.location.search);
+                    let startParam = urlParams.get('startapp') || tg.initDataUnsafe?.start_param;
                     let refId = null;
 
                     if (startParam && startParam.startsWith('ref_')) {
