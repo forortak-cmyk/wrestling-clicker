@@ -592,20 +592,21 @@
 
         // Парсинг реферального айди из нескольких возможных параметров Telegram
        function getReferrerFromUrl() {
-    // 1. Проверяем стандартный start_param от Telegram
-    let rawParam = tg.initDataUnsafe?.start_param;
+    // Ищем параметр ref в обычной адресной строке браузера
+    const urlParams = new URLSearchParams(window.location.search);
+    let rawParam = urlParams.get('ref');
 
-    // 2. Если его нет, ищем в URL адресной строки (на всякий случай)
-    if (!rawParam) {
-        const urlParams = new URLSearchParams(window.location.search);
-        rawParam = urlParams.get('startapp') || urlParams.get('tgWebAppStartParam');
+    // На всякий случай проверяем и хеш (если ссылка с решеткой)
+    if (!rawParam && window.location.hash.includes('ref=')) {
+        const hashParams = new URLSearchParams(window.location.hash.replace('#', '?'));
+        rawParam = hashParams.get('ref');
     }
 
-    // Для отладки (потом сможешь удалить этот alert)
-    alert("ПОЙМАЛИ ПАРАМЕТР: " + rawParam);
+    // Для проверки выведем, что нашли
+    alert("НАЙДЕННЫЙ REF ID: " + rawParam);
 
-    if (rawParam && rawParam.startsWith('ref_')) {
-        let parsedId = parseInt(rawParam.replace('ref_', ''));
+    if (rawParam) {
+        let parsedId = parseInt(rawParam);
         if (!isNaN(parsedId) && parsedId !== userId) {
             return parsedId;
         }
