@@ -592,17 +592,19 @@
 
         // Парсинг реферального айди из нескольких возможных параметров Telegram
        function getReferrerFromUrl() {
-    // Читаем параметр из хэша ссылки (всё, что идет после #)
-    let rawParam = window.location.hash.replace('#', '');
-
-    alert("ПОЙМАЛИ ИЗ ХЭША: " + rawParam);
-
-    if (rawParam && rawParam.startsWith('ref_')) {
-        let parsedId = parseInt(rawParam.replace('ref_', ''));
+    let hash = window.location.hash;
+    
+    // Ищем кусок текста, начинающийся с ref_ прямо внутри хэша
+    let match = hash.match(/ref_(\d+)/);
+    
+    if (match && match[1]) {
+        let parsedId = parseInt(match[1]);
         if (!isNaN(parsedId) && parsedId !== userId) {
+            alert("УСПЕХ! Найден реферал ID: " + parsedId);
             return parsedId;
         }
     }
+    
     return null;
 }
 
