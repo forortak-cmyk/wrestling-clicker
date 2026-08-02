@@ -591,18 +591,24 @@
         }
 
         // Парсинг реферального айди из нескольких возможных параметров Telegram
-        function getReferrerFromUrl() {
-            const urlParams = new URLSearchParams(window.location.search);
-            let rawParam = urlParams.get('startapp') || urlParams.get('tgWebAppStartParam') || tg.initDataUnsafe?.start_param;
+       function getReferrerFromUrl() {
+    const urlParams = new URLSearchParams(window.location.search);
+    
+    // Telegram передает параметр либо в URL, либо напрямую через SDK
+    let rawParam = urlParams.get('tgWebAppStartParam') 
+                || urlParams.get('startapp') 
+                || tg.initDataUnsafe?.start_param;
 
-            if (rawParam && rawParam.startsWith('ref_')) {
-                let parsedId = parseInt(rawParam.replace('ref_', ''));
-                if (!isNaN(parsedId) && parsedId !== userId) {
-                    return parsedId;
-                }
-            }
-            return null;
+    console.log("Получен реферальный параметр:", rawParam);
+
+    if (rawParam && rawParam.startsWith('ref_')) {
+        let parsedId = parseInt(rawParam.replace('ref_', ''));
+        if (!isNaN(parsedId) && parsedId !== userId) {
+            return parsedId;
         }
+    }
+    return null;
+}
 
         async function loadUserData() {
             if (!db) return;
