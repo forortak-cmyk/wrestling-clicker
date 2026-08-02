@@ -109,17 +109,45 @@
         .action-btn:disabled { background: #3a3a3c; color: #8e8e93; cursor: not-allowed; }
         .action-btn.success-btn { background: #34c759; }
 
-        .header-box {
+        /* Переключатель вкладки "Вывод / Ваучеры" */
+        .tabs-switcher {
+            display: flex;
             width: 100%;
             max-width: 400px;
-            background: #2c2c2e;
+            background: #1c1c1e;
+            border: 1px solid #2c2c2e;
             border-radius: 12px;
-            padding: 14px;
-            margin-bottom: 12px;
-            text-align: center;
+            padding: 4px;
+            margin-bottom: 15px;
+            flex-shrink: 0;
         }
-        .header-box h3 { font-size: 13px; color: #8e8e93; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
-        .header-box .val { font-size: 20px; font-weight: bold; color: #ffd700; }
+        .tab-part-btn {
+            flex: 1;
+            background: none;
+            border: none;
+            color: #8e8e93;
+            padding: 8px;
+            font-size: 13px;
+            font-weight: bold;
+            border-radius: 9px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .tab-part-btn.active {
+            background: #2c2c2e;
+            color: #fff;
+        }
+
+        .sub-tab-content {
+            display: none;
+            width: 100%;
+            max-width: 400px;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .sub-tab-content.active {
+            display: flex;
+        }
 
         /* Стили Рефералов */
         .ref-banner {
@@ -303,14 +331,37 @@
             </div>
         </div>
 
-        <!-- 4. Бизнес -->
+        <!-- 4. Вывод монет (бывший Бизнес) -->
         <div id="business-view" class="view">
-            <div class="header-box">
-                <h3>Пассивный доход</h3>
-                <div class="val"><span id="totalPassiveIncome">0</span> / 10,000 💰/день</div>
+            <!-- Переключатель подвкладок -->
+            <div class="tabs-switcher">
+                <button class="tab-part-btn active" onclick="switchSubTab('sponsors', this)">Спонсоры</button>
+                <button class="tab-part-btn" onclick="switchSubTab('vouchers', this)">Ваучеры</button>
             </div>
-            <div class="list-container" id="businessList">
-                <!-- 10 бизнесов -->
+
+            <!-- Подвкладка: Спонсоры -->
+            <div id="subtab-sponsors" class="sub-tab-content active">
+                <div class="list-container" id="sponsorsList">
+                    <!-- Заглушка под будущих спонсоров -->
+                    <div class="card-item">
+                        <div class="card-info">
+                            <h3>🤝 Спонсор #1</h3>
+                            <p>Приз: Скоро появится</p>
+                            <p class="cost">Цена: 50,000 💰</p>
+                        </div>
+                        <button class="action-btn" disabled>Скоро</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Подвкладка: Ваучеры -->
+            <div id="subtab-vouchers" class="sub-tab-content">
+                <div class="list-container" id="vouchersList">
+                    <div class="placeholder-card" style="margin-top: 10px; width: 100%; max-width: none;">
+                        <h2>🎫 Купленные ваучеры</h2>
+                        <p>У вас пока нет купленных ваучеров.</p>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -339,8 +390,8 @@
             <span>Главная</span>
         </button>
         <button class="nav-btn" onclick="switchView('business', this)">
-            <span class="icon">💼</span>
-            <span>Бизнес</span>
+            <span class="icon">💸</span>
+            <span>Вывод</span>
         </button>
         <button class="nav-btn" onclick="switchView('account', this)">
             <span class="icon">👤</span>
@@ -353,21 +404,6 @@
         const SUPABASE_ANON_KEY = 'sb_publishable_bKa8iusANSHGJ3KEgS8nJg_3TxrJdmZ';
         
         const BOT_USERNAME = 'Wrestler_clicker_bot'; 
-
-        const MAX_DAILY_INCOME = 10000;
-
-        const BUSINESS_DATA = [
-            { id: 1, name: "Ларёк спортпита", icon: "🥤", baseCost: 200, incomePerDay: 100 },
-            { id: 2, name: "Кофейня у зала", icon: "☕", baseCost: 500, incomePerDay: 250 },
-            { id: 3, name: "Будка с мороженым", icon: "🍦", baseCost: 1000, incomePerDay: 500 },
-            { id: 4, name: "Районный зал", icon: "🏋️", baseCost: 2000, incomePerDay: 800 },
-            { id: 5, name: "Магазин экипировки", icon: "👕", baseCost: 4000, incomePerDay: 1200 },
-            { id: 6, name: "Борцовский клуб", icon: "🥊", baseCost: 7000, incomePerDay: 1600 },
-            { id: 7, name: "Спортивный блог", icon: "📺", baseCost: 10000, incomePerDay: 2000 },
-            { id: 8, name: "Арена спаррингов", icon: "🏟️", baseCost: 15000, incomePerDay: 2400 },
-            { id: 9, name: "Турнирный центр", icon: "🏆", baseCost: 22000, incomePerDay: 3000 },
-            { id: 10, name: "Фитнес-империя", icon: "🏢", baseCost: 35000, incomePerDay: 4000 }
-        ];
 
         const tg = window.Telegram.WebApp;
         tg.expand();
@@ -386,8 +422,6 @@
         let score = 0;
         let totalEarned = 0;
         let clickPower = 1;
-        let userBusinesses = {};
-        let lastClaimTime = new Date();
         let refClaimed = 0;
         let availableRefBonus = 0;
         let myReferrerId = null; 
@@ -414,6 +448,15 @@
             if (tg.HapticFeedback) tg.HapticFeedback.selectionChanged();
         }
 
+        function switchSubTab(subTabName, btnEl) {
+            document.querySelectorAll('.sub-tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-part-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById('subtab-' + subTabName).classList.add('active');
+            btnEl.classList.add('active');
+
+            if (tg.HapticFeedback) tg.HapticFeedback.selectionChanged();
+        }
+
         function showStatus(text, isError = false) {
             statusEl.innerText = text;
             statusEl.className = isError ? 'status-text error' : 'status-text';
@@ -423,88 +466,6 @@
             score += amount;
             totalEarned += amount;
             scoreDisplay.innerText = score.toLocaleString();
-        }
-
-        function getTotalPassiveIncomePerDay() {
-            let total = 0;
-            BUSINESS_DATA.forEach(b => {
-                const level = userBusinesses[b.id] || 0;
-                total += level * b.incomePerDay;
-            });
-            return total;
-        }
-
-        function processPassiveIncome() {
-            const totalDaily = getTotalPassiveIncomePerDay();
-            if (totalDaily <= 0) return;
-
-            const now = new Date();
-            const elapsedSeconds = (now - new Date(lastClaimTime)) / 1000;
-
-            if (elapsedSeconds > 5) {
-                const incomePerSecond = totalDaily / 86400;
-                const earned = Math.floor(elapsedSeconds * incomePerSecond);
-
-                if (earned > 0) {
-                    addEarnings(earned);
-                    lastClaimTime = now;
-                    if (tg.showAlert) tg.showAlert(`Пассивный доход: +${earned.toLocaleString()} 💰`);
-                }
-            }
-        }
-
-        function renderBusinesses() {
-            const listEl = document.getElementById('businessList');
-            const totalDaily = getTotalPassiveIncomePerDay();
-            document.getElementById('totalPassiveIncome').innerText = totalDaily.toLocaleString();
-
-            listEl.innerHTML = '';
-
-            BUSINESS_DATA.forEach(b => {
-                const level = userBusinesses[b.id] || 0;
-                const cost = Math.floor(b.baseCost * Math.pow(1.3, level));
-                const nextIncome = totalDaily + b.incomePerDay;
-                const isCapped = nextIncome > MAX_DAILY_INCOME;
-
-                const card = document.createElement('div');
-                card.className = 'card-item';
-                card.innerHTML = `
-                    <div class="card-info">
-                        <h3>${b.icon} ${b.name} <span style="color:#8e8e93; font-size:12px;">[Ур. ${level}]</span></h3>
-                        <p class="income">+${b.incomePerDay.toLocaleString()} 💰/день</p>
-                        <p class="cost">${isCapped ? 'Достигнут лимит 10к' : 'Цена: ' + cost.toLocaleString() + ' 💰'}</p>
-                    </div>
-                    <button class="action-btn" ${isCapped ? 'disabled' : ''} onclick="buyBusiness(${b.id}, ${cost})">
-                        Улучшить
-                    </button>
-                `;
-                listEl.appendChild(card);
-            });
-        }
-
-        async function buyBusiness(bId, cost) {
-            const b = BUSINESS_DATA.find(x => x.id === bId);
-            const totalDaily = getTotalPassiveIncomePerDay();
-
-            if (totalDaily + b.incomePerDay > MAX_DAILY_INCOME) {
-                alert("Достигнут максимальный лимит пассивного дохода (10,000 💰/день)!");
-                return;
-            }
-
-            if (score < cost) {
-                if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
-                alert("Недостаточно монет!");
-                return;
-            }
-
-            score -= cost;
-            userBusinesses[bId] = (userBusinesses[bId] || 0) + 1;
-
-            scoreDisplay.innerText = score.toLocaleString();
-            renderBusinesses();
-
-            if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
-            await forceSave();
         }
 
         function updateShopUI() {
@@ -714,15 +675,11 @@
                     score = 0;
                     totalEarned = 0;
                     clickPower = 1;
-                    userBusinesses = {};
-                    lastClaimTime = new Date();
                     refClaimed = 0;
                 } else {
                     score = user.balance || 0;
                     totalEarned = user.total_earned || score;
                     clickPower = user.click_power || 1;
-                    userBusinesses = user.businesses || {};
-                    lastClaimTime = user.last_claim ? new Date(user.last_claim) : new Date();
                     refClaimed = user.ref_claimed || 0;
                     myReferrerId = user.referrer_id || null;
                 }
@@ -730,8 +687,6 @@
                 scoreDisplay.innerText = score.toLocaleString();
                 setupRefLink();
                 updateShopUI();
-                processPassiveIncome();
-                renderBusinesses();
 
                 if (!myReferrerId) {
                     document.getElementById('manualRefBlock').style.display = 'block';
@@ -754,8 +709,6 @@
                     balance: score, 
                     total_earned: totalEarned,
                     click_power: clickPower,
-                    businesses: userBusinesses,
-                    last_claim: lastClaimTime,
                     ref_claimed: refClaimed
                 }).eq('telegram_id', userId);
 
