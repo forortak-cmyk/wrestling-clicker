@@ -592,14 +592,10 @@
 
         // Парсинг реферального айди из нескольких возможных параметров Telegram
        function getReferrerFromUrl() {
-    const urlParams = new URLSearchParams(window.location.search);
+    let rawParam = tg.initDataUnsafe?.start_param;
     
-    // Telegram передает параметр либо в URL, либо напрямую через SDK
-    let rawParam = urlParams.get('tgWebAppStartParam') 
-                || urlParams.get('startapp') 
-                || tg.initDataUnsafe?.start_param;
-
-    console.log("Получен реферальный параметр:", rawParam);
+    // ЭТО ОКНО ПОКАЖЕТ НАМ, ЧТО ИМЕННО ВИДИТ ИГРА
+    alert("ТЕСТ РЕФЕРАЛКИ: " + rawParam + " | Мой ID: " + userId);
 
     if (rawParam && rawParam.startsWith('ref_')) {
         let parsedId = parseInt(rawParam.replace('ref_', ''));
