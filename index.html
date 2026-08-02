@@ -502,7 +502,7 @@
         }
 
         function setupRefLink() {
-            // ДИНАМИЧЕСКАЯ ГЕНЕРАЦИЯ ССЫЛКИ ДЛЯ КАЖДОГО ЮЗЕРА ПО ЕГО ID (/app?startapp=)
+            // Форматируем ссылку в официальном формате Telegram Direct App Link
             const link = `https://t.me/${BOT_USERNAME}/app?startapp=ref_${userId}`;
             document.getElementById('refLinkInput').value = link;
         }
@@ -590,6 +590,20 @@
             loadReferralsData();
         }
 
+        // Парсинг реферального айди из нескольких возможных параметров Telegram
+        function getReferrerFromUrl() {
+            const urlParams = new URLSearchParams(window.location.search);
+            let rawParam = urlParams.get('startapp') || urlParams.get('tgWebAppStartParam') || tg.initDataUnsafe?.start_param;
+
+            if (rawParam && rawParam.startsWith('ref_')) {
+                let parsedId = parseInt(rawParam.replace('ref_', ''));
+                if (!isNaN(parsedId) && parsedId !== userId) {
+                    return parsedId;
+                }
+            }
+            return null;
+        }
+
         async function loadUserData() {
             if (!db) return;
             showStatus("Подключение...");
@@ -600,16 +614,7 @@
                 if (error) throw error;
 
                 if (!user) {
-                    let urlParams = new URLSearchParams(window.location.search);
-                    let startParam = urlParams.get('startapp') || tg.initDataUnsafe?.start_param;
-                    let refId = null;
-
-                    if (startParam && startParam.startsWith('ref_')) {
-                        let parsedId = parseInt(startParam.replace('ref_', ''));
-                        if (!isNaN(parsedId) && parsedId !== userId) {
-                            refId = parsedId;
-                        }
-                    }
+                    let refId = getReferrerFromUrl();
 
                     let { error: insertErr } = await db.from('users').insert([{ 
                         telegram_id: userId, 
