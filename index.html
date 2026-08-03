@@ -118,7 +118,7 @@
         .action-btn:disabled { background: #3a3a3c; color: var(--text-muted); cursor: not-allowed; }
         .action-btn.success-btn { background: var(--accent-green); }
 
-        /* Referrals & Withdraw */
+        /* Referrals */
         .ref-banner {
             width: 100%;
             max-width: 400px;
@@ -156,6 +156,7 @@
             gap: 8px;
             width: 100%;
             max-width: 400px;
+            margin-bottom: 15px;
         }
         .ref-input {
             flex: 1;
@@ -166,8 +167,60 @@
             color: var(--text-muted);
             font-size: 12px;
             outline: none;
-            width: 100%;
         }
+
+        /* Business (Sponsors & Vouchers) */
+        .business-nav {
+            display: flex;
+            gap: 10px;
+            width: 100%;
+            max-width: 400px;
+            margin-bottom: 15px;
+        }
+        .business-nav-btn {
+            flex: 1;
+            padding: 10px;
+            background: var(--bg-header);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            color: var(--text-muted);
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .business-nav-btn.active {
+            background: var(--accent-blue);
+            color: white;
+            border-color: var(--accent-blue);
+        }
+        .sponsor-card {
+            background: var(--bg-header);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 15px;
+            margin-bottom: 10px;
+            width: 100%;
+            max-width: 400px;
+        }
+        .sponsor-card h3 { font-size: 16px; color: var(--accent-gold); margin-bottom: 6px; }
+        .sponsor-card p.desc { font-size: 12px; color: #aaa; margin-bottom: 12px; line-height: 1.3; }
+        .sponsor-row { display: flex; justify-content: space-between; align-items: center; }
+        .sponsor-price { font-weight: bold; font-size: 15px; color: white; }
+        
+        .voucher-card {
+            background: rgba(52, 199, 89, 0.1);
+            border: 1px solid var(--accent-green);
+            border-radius: 14px;
+            padding: 15px;
+            margin-bottom: 10px;
+            width: 100%;
+            max-width: 400px;
+            position: relative;
+            overflow: hidden;
+        }
+        .voucher-card h3 { font-size: 16px; color: var(--accent-green); margin-bottom: 4px; }
+        .voucher-code { font-family: monospace; font-size: 18px; color: var(--accent-gold); font-weight: bold; margin: 8px 0; letter-spacing: 1px; }
 
         /* Navigation */
         .nav-bar {
@@ -208,6 +261,7 @@
 
     <!-- Content Area -->
     <div class="content">
+        
         <!-- 1. Shop -->
         <div id="shop-view" class="view">
             <h2 style="margin-bottom: 12px; font-size: 18px;">🛒 Магазин прокачки</h2>
@@ -231,7 +285,6 @@
                 <p>Плюс <span class="ref-bonus-highlight">10%</span> от их заработка!</p>
             </div>
 
-            <!-- ID Display -->
             <div class="ref-banner" style="background: #2c2c2e; padding: 12px;">
                 <h3 style="font-size: 13px; color: #8e8e93; margin-bottom: 5px; text-align: left;">Твой ID:</h3>
                 <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -240,7 +293,6 @@
                 </div>
             </div>
 
-            <!-- Manual Referral -->
             <div id="manualRefBlock" class="ref-banner" style="display: none; padding-bottom: 10px;">
                 <h3 style="font-size: 15px; margin-bottom: 8px;">Введи ID друга 🎁</h3>
                 <div class="ref-input-group" style="margin-bottom: 5px;">
@@ -250,7 +302,6 @@
                 <p id="manualRefMsg" style="font-size: 11px; font-weight: bold;"></p>
             </div>
 
-            <!-- Stats -->
             <div class="ref-stats-grid">
                 <div class="stat-card">
                     <div class="title">Приглашено</div>
@@ -280,26 +331,54 @@
             </div>
         </div>
 
-        <!-- 4. Withdraw View -->
-        <div id="withdraw-view" class="view">
-            <div class="ref-banner">
-                <h2>💸 Вывод монет</h2>
-                <p>Доступно для вывода: <span id="withdrawAvailable" class="ref-bonus-highlight">0 💰</span></p>
+        <!-- 4. Business View (Спонсоры и Ваучеры) -->
+        <div id="business-view" class="view">
+            <!-- Переключатель вкладок внутри раздела Бизнес -->
+            <div class="business-nav">
+                <button class="business-nav-btn active" id="tab-sponsors" onclick="app.switchBusinessTab('sponsors')">Спонсоры</button>
+                <button class="business-nav-btn" id="tab-vouchers" onclick="app.switchBusinessTab('vouchers')">Ваучеры</button>
             </div>
-            
-            <div class="list-container" style="align-items: center;">
-                <div class="ref-input-group" style="margin-bottom: 10px;">
-                    <input type="text" id="walletInput" class="ref-input" placeholder="Реквизиты (карта, крипта и т.д.)">
+
+            <!-- Вкладка со Спонсорами -->
+            <div id="sponsors-container" style="width: 100%; display: flex; flex-direction: column; align-items: center;">
+                <h2 style="font-size: 16px; margin-bottom: 15px; color: #fff;">Доступные предложения</h2>
+                
+                <!-- Пример спонсора 1 (например, кофейня или кафе) -->
+                <div class="sponsor-card">
+                    <h3>☕ Кофейня "Бодрость" (Пример)</h3>
+                    <p class="desc">Бесплатный капучино или скидка 50% на любой десерт в нашей сети кофеен.</p>
+                    <div class="sponsor-row">
+                        <span class="sponsor-price">50,000 💰</span>
+                        <button class="action-btn" onclick="app.buyVoucher('Кофейня Бодрость', 'Скидка 50% на десерт / Бесплатный кофе', 50000)">Приобрести</button>
+                    </div>
                 </div>
-                <div class="ref-input-group" style="margin-bottom: 15px;">
-                    <input type="number" id="withdrawAmount" class="ref-input" placeholder="Сумма вывода">
+
+                <!-- Пример спонсора 2 (например, точка мороженого или фастфуд) -->
+                <div class="sponsor-card">
+                    <h3>🍦 Точка Мороженого (Пример)</h3>
+                    <p class="desc">Ваучер на 2 рожка крафтового мороженого. Выдаётся на кассе по промокоду.</p>
+                    <div class="sponsor-row">
+                        <span class="sponsor-price">100,000 💰</span>
+                        <button class="action-btn" onclick="app.buyVoucher('Точка Мороженого', '2 рожка бесплатно', 100000)">Приобрести</button>
+                    </div>
                 </div>
-                <button class="action-btn success-btn" style="width: 100%; padding: 12px; margin: 0;" onclick="app.requestWithdraw()">
-                    Заказать вывод
-                </button>
-                <p id="withdrawStatusMsg" style="font-size: 13px; margin-top: 10px; font-weight: bold; text-align: center;"></p>
+                
+                <p style="font-size: 12px; color: var(--text-muted); text-align: center; margin-top: 10px;">
+                    Здесь будут появляться новые спонсоры и реальные бизнесы.
+                </p>
+            </div>
+
+            <!-- Вкладка с Ваучерами -->
+            <div id="vouchers-container" style="width: 100%; display: none; flex-direction: column; align-items: center;">
+                <div id="my-vouchers-list" style="width: 100%; display: flex; flex-direction: column; align-items: center;">
+                    <!-- Сюда JS будет подгружать купленные ваучеры -->
+                </div>
+                <p id="no-vouchers-msg" style="color: var(--text-muted); font-size: 14px; margin-top: 20px; text-align: center;">
+                    У вас пока нет купленных ваучеров.<br>Перейдите во вкладку "Спонсоры".
+                </p>
             </div>
         </div>
+
     </div>
 
     <!-- Navigation -->
@@ -313,8 +392,9 @@
         <button class="nav-btn active" onclick="app.switchView('main', this)">
             <span class="icon">🪙</span><span>Главная</span>
         </button>
-        <button class="nav-btn" onclick="app.switchView('withdraw', this)">
-            <span class="icon">💸</span><span>Вывод</span>
+        <!-- Кнопка раздела Бизнес -->
+        <button class="nav-btn" onclick="app.switchView('business', this)">
+            <span class="icon">💼</span><span>Бизнес</span>
         </button>
     </div>
 
@@ -323,7 +403,6 @@
         const SUPABASE_URL = 'https://bgrvgzgqtryudztngkqm.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_bKa8iusANSHGJ3KEgS8nJg_3TxrJdmZ';
         
-        // Инкапсулируем логику в единый объект приложения
         const app = {
             tg: window.Telegram.WebApp,
             db: null,
@@ -335,7 +414,8 @@
                 clickPower: 1,
                 refClaimed: 0,
                 availableRefBonus: 0,
-                myReferrerId: null
+                myReferrerId: null,
+                vouchers: [] // Массив для хранения купленных ваучеров
             },
             saveTimeout: null,
 
@@ -386,6 +466,7 @@
                 document.getElementById('score').innerText = this.state.score.toLocaleString();
             },
 
+            // Переключение основных вкладок снизу
             switchView(viewName, btnEl) {
                 document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
                 document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
@@ -394,11 +475,81 @@
                 btnEl.classList.add('active');
 
                 if (viewName === 'referrals') this.loadReferralsData();
-                if (viewName === 'withdraw') {
-                    document.getElementById('withdrawAvailable').innerText = `${this.state.score.toLocaleString()} 💰`;
+                if (this.tg.HapticFeedback) this.tg.HapticFeedback.selectionChanged();
+            },
+
+            // Переключение вкладок внутри раздела Бизнес (Спонсоры / Ваучеры)
+            switchBusinessTab(tabName) {
+                document.getElementById('tab-sponsors').classList.remove('active');
+                document.getElementById('tab-vouchers').classList.remove('active');
+                document.getElementById(`tab-${tabName}`).classList.add('active');
+
+                if (tabName === 'sponsors') {
+                    document.getElementById('sponsors-container').style.display = 'flex';
+                    document.getElementById('vouchers-container').style.display = 'none';
+                } else {
+                    document.getElementById('sponsors-container').style.display = 'none';
+                    document.getElementById('vouchers-container').style.display = 'flex';
+                    this.renderVouchers();
+                }
+                if (this.tg.HapticFeedback) this.tg.HapticFeedback.selectionChanged();
+            },
+
+            // Покупка ваучера
+            async buyVoucher(sponsorName, prizeDesc, cost) {
+                if (this.state.score < cost) {
+                    if (this.tg.HapticFeedback) this.tg.HapticFeedback.notificationOccurred('error');
+                    if (this.tg.showAlert) this.tg.showAlert("❌ Недостаточно монет для покупки!");
+                    else alert("Недостаточно монет!");
+                    return;
                 }
 
-                if (this.tg.HapticFeedback) this.tg.HapticFeedback.selectionChanged();
+                // Списываем баланс
+                this.state.score -= cost;
+                document.getElementById('score').innerText = this.state.score.toLocaleString();
+                
+                // Генерируем уникальный промокод для ваучера
+                const randomCode = "VCHR-" + Math.random().toString(36).substr(2, 6).toUpperCase();
+                
+                const newVoucher = {
+                    sponsor: sponsorName,
+                    prize: prizeDesc,
+                    code: randomCode,
+                    date: new Date().toLocaleDateString()
+                };
+
+                this.state.vouchers.push(newVoucher);
+
+                if (this.tg.HapticFeedback) this.tg.HapticFeedback.notificationOccurred('success');
+                if (this.tg.showAlert) this.tg.showAlert(`✅ Вы успешно приобрели ваучер от "${sponsorName}"! Найти его можно во вкладке "Ваучеры".`);
+                
+                await this.forceSave(); // Сохраняем обновленный баланс
+                
+                // Примечание: Для сохранения самих ваучеров в Supabase нужно будет добавить 
+                // колонку 'vouchers' (тип JSONB) в таблицу 'users' или создать отдельную таблицу.
+            },
+
+            // Отрисовка списка купленных ваучеров
+            renderVouchers() {
+                const listEl = document.getElementById('my-vouchers-list');
+                const noMsg = document.getElementById('no-vouchers-msg');
+                
+                if (this.state.vouchers.length === 0) {
+                    noMsg.style.display = 'block';
+                    listEl.innerHTML = '';
+                    return;
+                }
+                
+                noMsg.style.display = 'none';
+                listEl.innerHTML = this.state.vouchers.map(v => `
+                    <div class="voucher-card">
+                        <h3>🎟️ ${v.sponsor}</h3>
+                        <p style="font-size: 13px; color: #fff; margin-bottom: 5px;">${v.prize}</p>
+                        <p style="font-size: 12px; color: #aaa;">Ваш промокод:</p>
+                        <div class="voucher-code">${v.code}</div>
+                        <p style="font-size: 10px; color: var(--text-muted); margin-top: 5px;">Дата покупки: ${v.date}</p>
+                    </div>
+                `).join('');
             },
 
             updateShopUI() {
@@ -473,6 +624,9 @@
                         this.state.clickPower = user.click_power || 1;
                         this.state.refClaimed = user.ref_claimed || 0;
                         this.state.myReferrerId = user.referrer_id || null;
+                        
+                        // Если добавишь колонку vouchers в Supabase, раскомментируй строку ниже:
+                        // this.state.vouchers = user.vouchers || []; 
                     }
 
                     document.getElementById('score').innerText = this.state.score.toLocaleString();
@@ -492,12 +646,18 @@
                 if (!this.db) return;
                 try {
                     this.updateStatus("Сохранение...");
-                    await this.db.from('users').update({ 
+                    
+                    const updateData = { 
                         balance: this.state.score, 
                         total_earned: this.state.totalEarned,
                         click_power: this.state.clickPower,
                         ref_claimed: this.state.refClaimed
-                    }).eq('telegram_id', this.state.userId);
+                    };
+                    
+                    // Если добавишь колонку vouchers в Supabase, раскомментируй строку ниже:
+                    // updateData.vouchers = this.state.vouchers;
+
+                    await this.db.from('users').update(updateData).eq('telegram_id', this.state.userId);
                     this.updateStatus("Сохранено!");
                 } catch (err) {
                     this.updateStatus("Не сохранено!", true);
@@ -615,69 +775,9 @@
                     refMsg.innerText = "❌ Ошибка соединения";
                     refMsg.style.color = "var(--accent-red)";
                 }
-            },
-
-            async requestWithdraw() {
-                const wallet = document.getElementById('walletInput').value.trim();
-                const amount = parseInt(document.getElementById('withdrawAmount').value.trim());
-                const msgEl = document.getElementById('withdrawStatusMsg');
-
-                if (!wallet) {
-                    msgEl.innerText = "❌ Укажите реквизиты";
-                    msgEl.style.color = "var(--accent-red)";
-                    return;
-                }
-                if (!amount || isNaN(amount) || amount <= 0) {
-                    msgEl.innerText = "❌ Неверная сумма";
-                    msgEl.style.color = "var(--accent-red)";
-                    return;
-                }
-                if (amount > this.state.score) {
-                    msgEl.innerText = "❌ Недостаточно монет";
-                    msgEl.style.color = "var(--accent-red)";
-                    return;
-                }
-
-                msgEl.innerText = "⏳ Обработка...";
-                msgEl.style.color = "var(--accent-gold)";
-
-                try {
-                    // Списываем баланс локально
-                    this.state.score -= amount;
-                    document.getElementById('score').innerText = this.state.score.toLocaleString();
-                    document.getElementById('withdrawAvailable').innerText = `${this.state.score.toLocaleString()} 💰`;
-                    
-                    // Обновляем баланс в базе users
-                    await this.forceSave();
-                    
-                    // Если у тебя есть таблица withdrawals в Supabase, раскомментируй этот блок:
-                    /*
-                    await this.db.from('withdrawals').insert([{
-                        telegram_id: this.state.userId,
-                        wallet: wallet,
-                        amount: amount,
-                        status: 'pending' 
-                    }]);
-                    */
-
-                    msgEl.innerText = "✅ Заявка отправлена!";
-                    msgEl.style.color = "var(--accent-green)";
-                    document.getElementById('withdrawAmount').value = '';
-                    
-                    if (this.tg.HapticFeedback) this.tg.HapticFeedback.notificationOccurred('success');
-                } catch (error) {
-                    // Возвращаем баланс при ошибке
-                    this.state.score += amount; 
-                    document.getElementById('score').innerText = this.state.score.toLocaleString();
-                    document.getElementById('withdrawAvailable').innerText = `${this.state.score.toLocaleString()} 💰`;
-                    
-                    msgEl.innerText = "❌ Ошибка соединения. Попробуйте позже.";
-                    msgEl.style.color = "var(--accent-red)";
-                }
             }
         };
 
-        // Запуск приложения
         window.addEventListener('DOMContentLoaded', () => app.init());
     </script>
 </body>
