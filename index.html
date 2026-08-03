@@ -34,16 +34,14 @@
 
         /* Header */
         .header {
-            padding: 15px 10px 10px;
+            padding: 20px 10px 15px;
             text-align: center;
             background: var(--bg-header);
             border-bottom: 1px solid var(--border-color);
             flex-shrink: 0;
         }
-        .user-name { font-size: 13px; color: var(--text-muted); margin-bottom: 2px; }
+        .user-name { font-size: 13px; color: var(--text-muted); margin-bottom: 4px; }
         .balance-box { font-size: 32px; font-weight: 800; color: var(--accent-gold); }
-        .status-text { font-size: 11px; color: var(--accent-green); margin-top: 2px; min-height: 15px; }
-        .status-text.error { color: var(--accent-red); }
 
         /* Content Area */
         .content {
@@ -256,7 +254,6 @@
     <div class="header">
         <div class="user-name" id="username">Подключение...</div>
         <div class="balance-box"><span id="score">0</span> 💰</div>
-        <div class="status-text" id="status">Загрузка данных...</div>
     </div>
 
     <!-- Content Area -->
@@ -264,16 +261,37 @@
         
         <!-- 1. Shop -->
         <div id="shop-view" class="view">
-            <h2 style="margin-bottom: 12px; font-size: 18px;">🛒 Магазин прокачки</h2>
+            <h2 style="margin-bottom: 4px; font-size: 18px;">🛒 Магазин прокачки</h2>
+            <p style="margin-bottom: 15px; font-size: 12px; color: var(--accent-red);">Максимальная сила: 500 за тап</p>
             <div class="list-container">
+                
                 <div class="card-item">
                     <div class="card-info">
-                        <h3>Борцовский хват</h3>
-                        <p>Сила тапа: <span id="currentPower">1</span> / 1000</p>
-                        <p class="cost" id="upgradeCost">Цена: 100 💰</p>
+                        <h3>Легкая тренировка (+1)</h3>
+                        <p>Текущая сила: <span class="currentPowerDisplay">1</span> / 500</p>
+                        <p class="cost" id="upgradeCost1">Цена: 100 💰</p>
                     </div>
-                    <button class="action-btn" id="buyPowerBtn" onclick="app.buyClickPower()">Купить</button>
+                    <button class="action-btn" id="buyBtn1">Купить</button>
                 </div>
+
+                <div class="card-item">
+                    <div class="card-info">
+                        <h3>Спортпит (+5)</h3>
+                        <p>Текущая сила: <span class="currentPowerDisplay">1</span> / 500</p>
+                        <p class="cost" id="upgradeCost2">Цена: 450 💰</p>
+                    </div>
+                    <button class="action-btn" id="buyBtn2">Купить</button>
+                </div>
+
+                <div class="card-item">
+                    <div class="card-info">
+                        <h3>Спарринг (+10)</h3>
+                        <p>Текущая сила: <span class="currentPowerDisplay">1</span> / 500</p>
+                        <p class="cost" id="upgradeCost3">Цена: 800 💰</p>
+                    </div>
+                    <button class="action-btn" id="buyBtn3">Купить</button>
+                </div>
+
             </div>
         </div>
 
@@ -338,30 +356,62 @@
                 <button class="business-nav-btn" id="tab-vouchers" onclick="app.switchBusinessTab('vouchers')">Ваучеры</button>
             </div>
 
-            <div id="sponsors-container" style="width: 100%; display: flex; flex-direction: column; align-items: center;">
-                <h2 style="font-size: 16px; margin-bottom: 15px; color: #fff;">Доступные предложения</h2>
+            <div id="sponsors-container" style="width: 100%; display: flex; flex-direction: column; align-items: center; padding-bottom: 20px;">
                 
                 <div class="sponsor-card">
-                    <h3>☕ Кофейня "Бодрость" (Пример)</h3>
-                    <p class="desc">Бесплатный капучино или скидка 50% на любой десерт в нашей сети кофеен.</p>
+                    <h3>☕ Кофейня "Бодрость"</h3>
+                    <p class="desc">Скидка 50% на любой десерт при покупке кофе.</p>
                     <div class="sponsor-row">
                         <span class="sponsor-price">50,000 💰</span>
-                        <button class="action-btn" onclick="app.buyVoucher('Кофейня Бодрость', 'Скидка 50% на десерт / Бесплатный кофе', 50000)">Приобрести</button>
+                        <button class="action-btn" onclick="app.buyVoucher('Кофейня Бодрость', 'Скидка 50% на десерт', 50000)">Приобрести</button>
                     </div>
                 </div>
 
                 <div class="sponsor-card">
-                    <h3>🍦 Точка Мороженого (Пример)</h3>
-                    <p class="desc">Ваучер на 2 рожка крафтового мороженого. Выдаётся на кассе по промокоду.</p>
+                    <h3>🍦 Точка Мороженого</h3>
+                    <p class="desc">Ваучер на 2 рожка крафтового мороженого.</p>
                     <div class="sponsor-row">
                         <span class="sponsor-price">100,000 💰</span>
-                        <button class="action-btn" onclick="app.buyVoucher('Точка Мороженого', '2 рожка бесплатно', 100000)">Приобрести</button>
+                        <button class="action-btn" onclick="app.buyVoucher('Точка Мороженого', '2 бесплатных рожка', 100000)">Приобрести</button>
                     </div>
                 </div>
-                
-                <p style="font-size: 12px; color: var(--text-muted); text-align: center; margin-top: 10px;">
-                    Здесь будут появляться новые спонсоры и реальные бизнесы.
-                </p>
+
+                <div class="sponsor-card">
+                    <h3>✂️ Барбершоп "Усач"</h3>
+                    <p class="desc">Скидка 30% на любую мужскую стрижку или оформление бороды.</p>
+                    <div class="sponsor-row">
+                        <span class="sponsor-price">200,000 💰</span>
+                        <button class="action-btn" onclick="app.buyVoucher('Барбершоп Усач', 'Скидка 30% на стрижку', 200000)">Приобрести</button>
+                    </div>
+                </div>
+
+                <div class="sponsor-card">
+                    <h3>🍕 Пиццерия "Мамма Мия"</h3>
+                    <p class="desc">Одна средняя пицца "Маргарита" совершенно бесплатно!</p>
+                    <div class="sponsor-row">
+                        <span class="sponsor-price">300,000 💰</span>
+                        <button class="action-btn" onclick="app.buyVoucher('Пиццерия Мамма Мия', 'Бесплатная Маргарита', 300000)">Приобрести</button>
+                    </div>
+                </div>
+
+                <div class="sponsor-card">
+                    <h3>💪 Фитнес-клуб "Титан"</h3>
+                    <p class="desc">Разовое бесплатное посещение тренажерного зала с тренером.</p>
+                    <div class="sponsor-row">
+                        <span class="sponsor-price">500,000 💰</span>
+                        <button class="action-btn" onclick="app.buyVoucher('Фитнес-клуб Титан', 'Разовое посещение', 500000)">Приобрести</button>
+                    </div>
+                </div>
+
+                <div class="sponsor-card">
+                    <h3>👟 Магазин Кроссовок</h3>
+                    <p class="desc">Купон на скидку 1000₽ при покупке любой пары обуви.</p>
+                    <div class="sponsor-row">
+                        <span class="sponsor-price">1,000,000 💰</span>
+                        <button class="action-btn" onclick="app.buyVoucher('Магазин Кроссовок', 'Купон 1000₽ на обувь', 1000000)">Приобрести</button>
+                    </div>
+                </div>
+
             </div>
 
             <div id="vouchers-container" style="width: 100%; display: none; flex-direction: column; align-items: center;">
@@ -372,7 +422,7 @@
             </div>
         </div>
 
-        <!-- 5. Profile View (Информация о статусе аккаунта) -->
+        <!-- 5. Profile View -->
         <div id="profile-view" class="view">
             <h2 style="font-size: 18px; margin-bottom: 15px; color: #fff;">👤 Статус аккаунта</h2>
             <div class="list-container">
@@ -462,6 +512,7 @@
                 vouchers: []
             },
             saveTimeout: null,
+            MAX_POWER: 500, // Глобальный лимит силы клика
 
             init() {
                 this.tg.expand();
@@ -480,7 +531,7 @@
                     this.db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
                     this.loadUserData();
                 } catch (e) {
-                    this.updateStatus("Ошибка БД", true);
+                    console.error("Supabase Error");
                 }
 
                 this.setupEventListeners();
@@ -496,12 +547,6 @@
                 document.addEventListener('visibilitychange', () => {
                     if (document.visibilityState === 'hidden') this.forceSave();
                 });
-            },
-
-            updateStatus(text, isError = false) {
-                const el = document.getElementById('status');
-                el.innerText = text;
-                el.className = isError ? 'status-text error' : 'status-text';
             },
 
             addEarnings(amount) {
@@ -600,25 +645,34 @@
             },
 
             updateShopUI() {
-                document.getElementById('currentPower').innerText = this.state.clickPower;
+                // Обновляем текущую силу везде в магазине
+                document.querySelectorAll('.currentPowerDisplay').forEach(el => el.innerText = this.state.clickPower);
                 document.getElementById('powerLabel').innerText = `+${this.state.clickPower} за тап`;
 
-                const upgradeCostEl = document.getElementById('upgradeCost');
-                const buyBtn = document.getElementById('buyPowerBtn');
+                this.setupShopItem(1, 1, 100);
+                this.setupShopItem(2, 5, 450);
+                this.setupShopItem(3, 10, 800);
+            },
 
-                if (this.state.clickPower >= 1000) {
-                    upgradeCostEl.innerText = "Максимум!";
-                    buyBtn.innerText = "МАКС";
-                    buyBtn.disabled = true;
+            setupShopItem(id, powerAdd, costMultiplier) {
+                const costEl = document.getElementById(`upgradeCost${id}`);
+                const btnEl = document.getElementById(`buyBtn${id}`);
+                
+                if (this.state.clickPower + powerAdd > this.MAX_POWER) {
+                    costEl.innerText = "Максимум!";
+                    btnEl.innerText = "МАКС";
+                    btnEl.disabled = true;
                 } else {
-                    upgradeCostEl.innerText = `Цена: ${(this.state.clickPower * 100).toLocaleString()} 💰`;
-                    buyBtn.disabled = false;
+                    const cost = this.state.clickPower * costMultiplier;
+                    costEl.innerText = `Цена: ${cost.toLocaleString()} 💰`;
+                    btnEl.innerText = "Купить";
+                    btnEl.disabled = false;
+                    btnEl.onclick = () => this.buyClickPower(powerAdd, cost);
                 }
             },
 
-            async buyClickPower() {
-                if (this.state.clickPower >= 1000) return;
-                const cost = this.state.clickPower * 100;
+            async buyClickPower(powerAdd, cost) {
+                if (this.state.clickPower + powerAdd > this.MAX_POWER) return;
 
                 if (this.state.score < cost) {
                     if (this.tg.HapticFeedback) this.tg.HapticFeedback.notificationOccurred('error');
@@ -627,7 +681,7 @@
                 }
 
                 this.state.score -= cost;
-                this.state.clickPower++;
+                this.state.clickPower += powerAdd;
                 
                 document.getElementById('score').innerText = this.state.score.toLocaleString();
                 this.updateShopUI();
@@ -647,7 +701,6 @@
 
             async loadUserData() {
                 if (!this.db) return;
-                this.updateStatus("Подключение...");
 
                 try {
                     let { data: user, error } = await this.db.from('users')
@@ -673,7 +726,6 @@
                         this.state.myReferrerId = user.referrer_id || null;
                     }
 
-                    // Подсчитаем количество рефералов для профиля
                     const { count } = await this.db.from('users')
                         .select('*', { count: 'exact', head: true })
                         .eq('referrer_id', this.state.userId);
@@ -685,18 +737,14 @@
                     document.getElementById('manualRefBlock').style.display = 
                         this.state.myReferrerId ? 'none' : 'block';
 
-                    this.updateStatus("Сохранено");
                 } catch (err) {
                     console.error("Ошибка загрузки:", err);
-                    this.updateStatus("Ошибка БД", true);
                 }
             },
 
             async forceSave() {
                 if (!this.db) return;
                 try {
-                    this.updateStatus("Сохранение...");
-                    
                     const updateData = { 
                         balance: this.state.score, 
                         total_earned: this.state.totalEarned,
@@ -705,16 +753,15 @@
                     };
 
                     await this.db.from('users').update(updateData).eq('telegram_id', this.state.userId);
-                    this.updateStatus("Сохранено!");
                 } catch (err) {
-                    this.updateStatus("Не сохранено!", true);
+                    console.error("Сохранение не удалось");
                 }
             },
 
             saveDebounced() {
-                this.updateStatus("Есть изменения...");
                 clearTimeout(this.saveTimeout);
-                this.saveTimeout = setTimeout(() => this.forceSave(), 300);
+                // Уменьшил таймер до 100 мс для быстрого и невидимого фонового сохранения
+                this.saveTimeout = setTimeout(() => this.forceSave(), 100);
             },
 
             async loadReferralsData() {
