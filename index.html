@@ -118,7 +118,7 @@
         .action-btn:disabled { background: #3a3a3c; color: var(--text-muted); cursor: not-allowed; }
         .action-btn.success-btn { background: var(--accent-green); }
 
-        /* Referrals */
+        /* Referrals & Withdraw */
         .ref-banner {
             width: 100%;
             max-width: 400px;
@@ -156,7 +156,6 @@
             gap: 8px;
             width: 100%;
             max-width: 400px;
-            margin-bottom: 15px;
         }
         .ref-input {
             flex: 1;
@@ -167,6 +166,7 @@
             color: var(--text-muted);
             font-size: 12px;
             outline: none;
+            width: 100%;
         }
 
         /* Navigation */
@@ -189,7 +189,7 @@
             justify-content: center;
             font-size: 10px;
             cursor: pointer;
-            width: 20%;
+            flex: 1;
             gap: 4px;
             transition: color 0.2s;
         }
@@ -279,6 +279,27 @@
                 <span class="coin-sub" id="powerLabel">+1 за тап</span>
             </div>
         </div>
+
+        <!-- 4. Withdraw View -->
+        <div id="withdraw-view" class="view">
+            <div class="ref-banner">
+                <h2>💸 Вывод монет</h2>
+                <p>Доступно для вывода: <span id="withdrawAvailable" class="ref-bonus-highlight">0 💰</span></p>
+            </div>
+            
+            <div class="list-container" style="align-items: center;">
+                <div class="ref-input-group" style="margin-bottom: 10px;">
+                    <input type="text" id="walletInput" class="ref-input" placeholder="Реквизиты (карта, крипта и т.д.)">
+                </div>
+                <div class="ref-input-group" style="margin-bottom: 15px;">
+                    <input type="number" id="withdrawAmount" class="ref-input" placeholder="Сумма вывода">
+                </div>
+                <button class="action-btn success-btn" style="width: 100%; padding: 12px; margin: 0;" onclick="app.requestWithdraw()">
+                    Заказать вывод
+                </button>
+                <p id="withdrawStatusMsg" style="font-size: 13px; margin-top: 10px; font-weight: bold; text-align: center;"></p>
+            </div>
+        </div>
     </div>
 
     <!-- Navigation -->
@@ -291,6 +312,9 @@
         </button>
         <button class="nav-btn active" onclick="app.switchView('main', this)">
             <span class="icon">🪙</span><span>Главная</span>
+        </button>
+        <button class="nav-btn" onclick="app.switchView('withdraw', this)">
+            <span class="icon">💸</span><span>Вывод</span>
         </button>
     </div>
 
@@ -370,6 +394,10 @@
                 btnEl.classList.add('active');
 
                 if (viewName === 'referrals') this.loadReferralsData();
+                if (viewName === 'withdraw') {
+                    document.getElementById('withdrawAvailable').innerText = `${this.state.score.toLocaleString()} 💰`;
+                }
+
                 if (this.tg.HapticFeedback) this.tg.HapticFeedback.selectionChanged();
             },
 
@@ -419,7 +447,6 @@
                     });
             },
 
-            // Дальнейшая логика Supabase (Загрузка/Сохранение/Рефералы) 
             async loadUserData() {
                 if (!this.db) return;
                 this.updateStatus("Подключение...");
@@ -587,6 +614,65 @@
                 } catch (error) {
                     refMsg.innerText = "❌ Ошибка соединения";
                     refMsg.style.color = "var(--accent-red)";
+                }
+            },
+
+            async requestWithdraw() {
+                const wallet = document.getElementById('walletInput').value.trim();
+                const amount = parseInt(document.getElementById('withdrawAmount').value.trim());
+                const msgEl = document.getElementById('withdrawStatusMsg');
+
+                if (!wallet) {
+                    msgEl.innerText = "❌ Укажите реквизиты";
+                    msgEl.style.color = "var(--accent-red)";
+                    return;
+                }
+                if (!amount || isNaN(amount) || amount <= 0) {
+                    msgEl.innerText = "❌ Неверная сумма";
+                    msgEl.style.color = "var(--accent-red)";
+                    return;
+                }
+                if (amount > this.state.score) {
+                    msgEl.innerText = "❌ Недостаточно монет";
+                    msgEl.style.color = "var(--accent-red)";
+                    return;
+                }
+
+                msgEl.innerText = "⏳ Обработка...";
+                msgEl.style.color = "var(--accent-gold)";
+
+                try {
+                    // Списываем баланс локально
+                    this.state.score -= amount;
+                    document.getElementById('score').innerText = this.state.score.toLocaleString();
+                    document.getElementById('withdrawAvailable').innerText = `${this.state.score.toLocaleString()} 💰`;
+                    
+                    // Обновляем баланс в базе users
+                    await this.forceSave();
+                    
+                    // Если у тебя есть таблица withdrawals в Supabase, раскомментируй этот блок:
+                    /*
+                    await this.db.from('withdrawals').insert([{
+                        telegram_id: this.state.userId,
+                        wallet: wallet,
+                        amount: amount,
+                        status: 'pending' 
+                    }]);
+                    */
+
+                    msgEl.innerText = "✅ Заявка отправлена!";
+                    msgEl.style.color = "var(--accent-green)";
+                    document.getElementById('withdrawAmount').value = '';
+                    
+                    if (this.tg.HapticFeedback) this.tg.HapticFeedback.notificationOccurred('success');
+                } catch (error) {
+                    // Возвращаем баланс при ошибке
+                    this.state.score += amount; 
+                    document.getElementById('score').innerText = this.state.score.toLocaleString();
+                    document.getElementById('withdrawAvailable').innerText = `${this.state.score.toLocaleString()} 💰`;
+                    
+                    msgEl.innerText = "❌ Ошибка соединения. Попробуйте позже.";
+                    msgEl.style.color = "var(--accent-red)";
                 }
             }
         };
