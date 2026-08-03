@@ -7,10 +7,23 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
+        :root {
+            --bg-main: #151517;
+            --bg-header: #1c1c1e;
+            --border-color: #2c2c2e;
+            --text-main: #ffffff;
+            --text-muted: #8e8e93;
+            --accent-gold: #ffd700;
+            --accent-green: #34c759;
+            --accent-blue: #0a84ff;
+            --accent-red: #ff3b30;
+        }
+
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        
         body {
-            background-color: #151517;
-            color: #ffffff;
+            background-color: var(--bg-main);
+            color: var(--text-main);
             height: 100vh;
             display: flex;
             flex-direction: column;
@@ -19,40 +32,38 @@
             -webkit-user-select: none;
         }
 
-        /* Шапка */
+        /* Header */
         .header {
             padding: 15px 10px 10px;
             text-align: center;
-            background: #1c1c1e;
-            border-bottom: 1px solid #2c2c2e;
+            background: var(--bg-header);
+            border-bottom: 1px solid var(--border-color);
             flex-shrink: 0;
         }
-        .user-name { font-size: 13px; color: #8e8e93; margin-bottom: 2px; }
-        .balance-box { font-size: 32px; font-weight: 800; color: #ffd700; }
-        .status-text { font-size: 11px; color: #34c759; margin-top: 2px; min-height: 15px; }
-        .status-text.error { color: #ff3b30; }
+        .user-name { font-size: 13px; color: var(--text-muted); margin-bottom: 2px; }
+        .balance-box { font-size: 32px; font-weight: 800; color: var(--accent-gold); }
+        .status-text { font-size: 11px; color: var(--accent-green); margin-top: 2px; min-height: 15px; }
+        .status-text.error { color: var(--accent-red); }
 
-        /* Контейнер Экранов */
+        /* Content Area */
         .content {
             flex: 1;
             overflow-y: auto;
             position: relative;
         }
-
+        
         .view {
             display: none;
             width: 100%;
             height: 100%;
             padding: 15px;
             box-sizing: border-box;
-        }
-        .view.active {
-            display: flex;
             flex-direction: column;
             align-items: center;
         }
+        .view.active { display: flex; }
 
-        /* Экран 3: Главная (Кликер) */
+        /* Main Clicker */
         #main-view { justify-content: center; }
         .coin {
             width: 210px;
@@ -74,13 +85,12 @@
         .coin:active { transform: scale(0.92); }
         .coin-sub { font-size: 12px; font-weight: bold; margin-top: 5px; opacity: 0.8; }
 
-        /* Стили Списков */
-        #shop-view, #business-view, #referrals-view { justify-content: flex-start; }
+        /* Shared Components */
         .list-container { width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 10px; padding-bottom: 20px; }
         
         .card-item {
-            background: #1c1c1e;
-            border: 1px solid #2c2c2e;
+            background: var(--bg-header);
+            border: 1px solid var(--border-color);
             border-radius: 14px;
             padding: 12px 15px;
             display: flex;
@@ -88,13 +98,12 @@
             align-items: center;
         }
         .card-info { flex: 1; }
-        .card-info h3 { font-size: 15px; margin-bottom: 2px; color: #fff; }
-        .card-info p { font-size: 12px; color: #8e8e93; }
-        .card-info .income { color: #34c759; font-weight: 600; }
-        .card-info .cost { color: #ffd700; margin-top: 2px; }
+        .card-info h3 { font-size: 15px; margin-bottom: 2px; }
+        .card-info p { font-size: 12px; color: var(--text-muted); }
+        .card-info .cost { color: var(--accent-gold); margin-top: 2px; }
 
         .action-btn {
-            background: #0a84ff;
+            background: var(--accent-blue);
             color: white;
             border: none;
             padding: 8px 14px;
@@ -106,54 +115,14 @@
             margin-left: 10px;
         }
         .action-btn:active { background: #0062cc; }
-        .action-btn:disabled { background: #3a3a3c; color: #8e8e93; cursor: not-allowed; }
-        .action-btn.success-btn { background: #34c759; }
+        .action-btn:disabled { background: #3a3a3c; color: var(--text-muted); cursor: not-allowed; }
+        .action-btn.success-btn { background: var(--accent-green); }
 
-        /* Переключатель вкладки "Вывод / Ваучеры" */
-        .tabs-switcher {
-            display: flex;
-            width: 100%;
-            max-width: 400px;
-            background: #1c1c1e;
-            border: 1px solid #2c2c2e;
-            border-radius: 12px;
-            padding: 4px;
-            margin-bottom: 15px;
-            flex-shrink: 0;
-        }
-        .tab-part-btn {
-            flex: 1;
-            background: none;
-            border: none;
-            color: #8e8e93;
-            padding: 8px;
-            font-size: 13px;
-            font-weight: bold;
-            border-radius: 9px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .tab-part-btn.active {
-            background: #2c2c2e;
-            color: #fff;
-        }
-
-        .sub-tab-content {
-            display: none;
-            width: 100%;
-            max-width: 400px;
-            flex-direction: column;
-            gap: 10px;
-        }
-        .sub-tab-content.active {
-            display: flex;
-        }
-
-        /* Стили Рефералов */
+        /* Referrals */
         .ref-banner {
             width: 100%;
             max-width: 400px;
-            background: linear-gradient(135deg, #1c1c1e 0%, #2c2c2e 100%);
+            background: linear-gradient(135deg, var(--bg-header) 0%, var(--border-color) 100%);
             border: 1px solid #3a3a3c;
             border-radius: 16px;
             padding: 16px;
@@ -162,8 +131,8 @@
         }
         .ref-banner h2 { font-size: 18px; margin-bottom: 6px; }
         .ref-banner p { font-size: 13px; color: #aaa; line-height: 1.4; }
-        .ref-bonus-highlight { color: #ffd700; font-weight: bold; }
-
+        .ref-bonus-highlight { color: var(--accent-gold); font-weight: bold; }
+        
         .ref-stats-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -173,61 +142,47 @@
             margin-bottom: 15px;
         }
         .stat-card {
-            background: #1c1c1e;
-            border: 1px solid #2c2c2e;
+            background: var(--bg-header);
+            border: 1px solid var(--border-color);
             border-radius: 12px;
             padding: 12px;
             text-align: center;
         }
-        .stat-card .title { font-size: 11px; color: #8e8e93; margin-bottom: 4px; }
-        .stat-card .value { font-size: 16px; font-weight: bold; color: #fff; }
+        .stat-card .title { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
+        .stat-card .value { font-size: 16px; font-weight: bold; }
 
-        .ref-link-box {
-            width: 100%;
-            max-width: 400px;
+        .ref-input-group {
             display: flex;
             gap: 8px;
+            width: 100%;
+            max-width: 400px;
             margin-bottom: 15px;
         }
         .ref-input {
             flex: 1;
-            background: #1c1c1e;
-            border: 1px solid #2c2c2e;
+            background: var(--bg-header);
+            border: 1px solid var(--border-color);
             border-radius: 10px;
             padding: 10px;
-            color: #8e8e93;
+            color: var(--text-muted);
             font-size: 12px;
             outline: none;
         }
 
-        /* Заглушки */
-        .placeholder-card {
-            background: #1c1c1e;
-            border: 1px solid #2c2c2e;
-            border-radius: 16px;
-            padding: 25px 15px;
-            text-align: center;
-            width: 100%;
-            max-width: 320px;
-            margin-top: 40px;
-        }
-        .placeholder-card h2 { margin-bottom: 10px; font-size: 20px; }
-        .placeholder-card p { color: #8e8e93; font-size: 14px; }
-
-        /* Нижнее Навигационное Меню */
+        /* Navigation */
         .nav-bar {
             display: flex;
             justify-content: space-around;
             align-items: center;
-            background: #1c1c1e;
-            border-top: 1px solid #2c2c2e;
+            background: var(--bg-header);
+            border-top: 1px solid var(--border-color);
             padding: 8px 4px 12px;
             flex-shrink: 0;
         }
         .nav-btn {
             background: none;
             border: none;
-            color: #8e8e93;
+            color: var(--text-muted);
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -239,22 +194,21 @@
             transition: color 0.2s;
         }
         .nav-btn .icon { font-size: 20px; }
-        .nav-btn.active { color: #0a84ff; font-weight: bold; }
+        .nav-btn.active { color: var(--accent-blue); font-weight: bold; }
     </style>
 </head>
 <body>
 
-    <!-- Шапка -->
+    <!-- Header -->
     <div class="header">
         <div class="user-name" id="username">Подключение...</div>
         <div class="balance-box"><span id="score">0</span> 💰</div>
         <div class="status-text" id="status">Загрузка данных...</div>
     </div>
 
-    <!-- Область контента -->
+    <!-- Content Area -->
     <div class="content">
-
-        <!-- 1. Магазин -->
+        <!-- 1. Shop -->
         <div id="shop-view" class="view">
             <h2 style="margin-bottom: 12px; font-size: 18px;">🛒 Магазин прокачки</h2>
             <div class="list-container">
@@ -264,521 +218,381 @@
                         <p>Сила тапа: <span id="currentPower">1</span> / 1000</p>
                         <p class="cost" id="upgradeCost">Цена: 100 💰</p>
                     </div>
-                    <button class="action-btn" id="buyPowerBtn" onclick="buyClickPower()">Купить</button>
+                    <button class="action-btn" id="buyPowerBtn" onclick="app.buyClickPower()">Купить</button>
                 </div>
             </div>
         </div>
 
-        <!-- 2. Рефералы -->
+        <!-- 2. Referrals -->
         <div id="referrals-view" class="view">
             <div class="ref-banner">
                 <h2>🤝 Приглашай друзей</h2>
                 <p>За каждого друга: <span class="ref-bonus-highlight">+10,000 💰</span></p>
-                <p>Плюс <span class="ref-bonus-highlight">10%</span> от всего их заработка!</p>
+                <p>Плюс <span class="ref-bonus-highlight">10%</span> от их заработка!</p>
             </div>
 
-            <!-- БЛОК: Твой ID -->
-            <div class="ref-banner" style="background: #2c2c2e; padding: 12px; margin-bottom: 15px;">
-                <h3 style="font-size: 13px; color: #8e8e93; margin-bottom: 5px; text-align: left;">Твой ID для приглашения:</h3>
-                <div style="display: flex; gap: 8px; align-items: center; justify-content: space-between;">
+            <!-- ID Display -->
+            <div class="ref-banner" style="background: #2c2c2e; padding: 12px;">
+                <h3 style="font-size: 13px; color: #8e8e93; margin-bottom: 5px; text-align: left;">Твой ID:</h3>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
                     <span id="myIdDisplay" style="font-size: 20px; font-weight: bold; color: #ffd700;">Загрузка...</span>
-                    <button class="action-btn" onclick="copyMyId()" style="margin: 0;">Копировать</button>
+                    <button class="action-btn" onclick="app.copyMyId()" style="margin: 0;">Копировать</button>
                 </div>
             </div>
 
-            <!-- БЛОК РУЧНОГО ВВОДА РЕФЕРАЛА -->
-            <div id="manualRefBlock" class="ref-banner" style="display: none; background: linear-gradient(135deg, #2c2c2e 0%, #1c1c1e 100%); padding-bottom: 10px;">
+            <!-- Manual Referral -->
+            <div id="manualRefBlock" class="ref-banner" style="display: none; padding-bottom: 10px;">
                 <h3 style="font-size: 15px; margin-bottom: 8px;">Введи ID друга 🎁</h3>
-                <p style="font-size: 12px; color: #aaa; margin-bottom: 10px;">Введи ID того, кто тебя пригласил, и получи 10,000 💰</p>
-                <div style="display: flex; gap: 8px;">
-                    <input type="number" id="manualRefInput" class="ref-input" placeholder="Например: 123456789">
-                    <button class="action-btn success-btn" onclick="claimManualRef()">Забрать</button>
+                <div class="ref-input-group" style="margin-bottom: 5px;">
+                    <input type="number" id="manualRefInput" class="ref-input" placeholder="ID пригласившего">
+                    <button class="action-btn success-btn" onclick="app.claimManualRef()">Забрать</button>
                 </div>
-                <p id="manualRefMsg" style="font-size: 11px; margin-top: 8px; font-weight: bold;"></p>
+                <p id="manualRefMsg" style="font-size: 11px; font-weight: bold;"></p>
             </div>
 
+            <!-- Stats -->
             <div class="ref-stats-grid">
                 <div class="stat-card">
-                    <div class="title">Друзей приглашено</div>
+                    <div class="title">Приглашено</div>
                     <div class="value" id="refCountVal">0</div>
                 </div>
                 <div class="stat-card">
-                    <div class="title">Доступно к сбору</div>
+                    <div class="title">Доступно</div>
                     <div class="value" style="color: #34c759;" id="refAvailableVal">0 💰</div>
                 </div>
             </div>
 
-            <div class="ref-link-box">
-                <input type="text" class="ref-input" id="refLinkInput" readonly value="Загрузка ссылки...">
-                <button class="action-btn" onclick="copyRefLink()">Копировать</button>
-            </div>
-
-            <button class="action-btn success-btn" id="claimRefBtn" style="width: 100%; max-width: 400px; padding: 12px; font-size: 14px; margin: 0 0 15px 0;" onclick="claimRefReward()" disabled>
+            <button class="action-btn success-btn" id="claimRefBtn" style="width: 100%; max-width: 400px; padding: 12px; margin-bottom: 15px;" onclick="app.claimRefReward()" disabled>
                 Забрать бонус
             </button>
 
-            <div class="list-container" id="refListContainer">
+            <div class="list-container">
                 <h3 style="font-size: 14px; color: #8e8e93; margin-bottom: 5px;">Ваши рефералы:</h3>
                 <div id="refList">Загрузка...</div>
             </div>
         </div>
 
-        <!-- 3. Главная (Кликер) -->
+        <!-- 3. Main (Clicker) -->
         <div id="main-view" class="view active">
             <div class="coin" id="coinBtn">
                 <span>ТАПАЙ</span>
                 <span class="coin-sub" id="powerLabel">+1 за тап</span>
             </div>
         </div>
-
-        <!-- 4. Вывод монет (бывший Бизнес) -->
-        <div id="business-view" class="view">
-            <!-- Переключатель подвкладок -->
-            <div class="tabs-switcher">
-                <button class="tab-part-btn active" onclick="switchSubTab('sponsors', this)">Спонсоры</button>
-                <button class="tab-part-btn" onclick="switchSubTab('vouchers', this)">Ваучеры</button>
-            </div>
-
-            <!-- Подвкладка: Спонсоры -->
-            <div id="subtab-sponsors" class="sub-tab-content active">
-                <div class="list-container" id="sponsorsList">
-                    <!-- Заглушка под будущих спонсоров -->
-                    <div class="card-item">
-                        <div class="card-info">
-                            <h3>🤝 Спонсор #1</h3>
-                            <p>Приз: Скоро появится</p>
-                            <p class="cost">Цена: 50,000 💰</p>
-                        </div>
-                        <button class="action-btn" disabled>Скоро</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Подвкладка: Ваучеры -->
-            <div id="subtab-vouchers" class="sub-tab-content">
-                <div class="list-container" id="vouchersList">
-                    <div class="placeholder-card" style="margin-top: 10px; width: 100%; max-width: none;">
-                        <h2>🎫 Купленные ваучеры</h2>
-                        <p>У вас пока нет купленных ваучеров.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 5. Аккаунт -->
-        <div id="account-view" class="view">
-            <div class="placeholder-card">
-                <h2>👤 Профиль</h2>
-                <p>Раздел в разработке</p>
-            </div>
-        </div>
-
     </div>
 
-    <!-- Нижнее меню -->
+    <!-- Navigation -->
     <div class="nav-bar">
-        <button class="nav-btn" onclick="switchView('shop', this)">
-            <span class="icon">🛒</span>
-            <span>Магазин</span>
+        <button class="nav-btn" onclick="app.switchView('shop', this)">
+            <span class="icon">🛒</span><span>Магазин</span>
         </button>
-        <button class="nav-btn" onclick="switchView('referrals', this)">
-            <span class="icon">👥</span>
-            <span>Рефералы</span>
+        <button class="nav-btn" onclick="app.switchView('referrals', this)">
+            <span class="icon">👥</span><span>Рефералы</span>
         </button>
-        <button class="nav-btn active" onclick="switchView('main', this)">
-            <span class="icon">🪙</span>
-            <span>Главная</span>
-        </button>
-        <button class="nav-btn" onclick="switchView('business', this)">
-            <span class="icon">💸</span>
-            <span>Вывод</span>
-        </button>
-        <button class="nav-btn" onclick="switchView('account', this)">
-            <span class="icon">👤</span>
-            <span>Аккаунт</span>
+        <button class="nav-btn active" onclick="app.switchView('main', this)">
+            <span class="icon">🪙</span><span>Главная</span>
         </button>
     </div>
 
     <script>
+        // Конфигурация Supabase
         const SUPABASE_URL = 'https://bgrvgzgqtryudztngkqm.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_bKa8iusANSHGJ3KEgS8nJg_3TxrJdmZ';
         
-        const BOT_USERNAME = 'Wrestler_clicker_bot'; 
+        // Инкапсулируем логику в единый объект приложения
+        const app = {
+            tg: window.Telegram.WebApp,
+            db: null,
+            state: {
+                userId: 999999,
+                userName: "Игрок",
+                score: 0,
+                totalEarned: 0,
+                clickPower: 1,
+                refClaimed: 0,
+                availableRefBonus: 0,
+                myReferrerId: null
+            },
+            saveTimeout: null,
 
-        const tg = window.Telegram.WebApp;
-        tg.expand();
-        tg.ready();
-
-        const tgUser = tg.initDataUnsafe?.user;
-        const userId = tgUser ? tgUser.id : 999999;
-        const userName = tgUser ? tgUser.first_name : "Игрок (Браузер)";
-
-        document.getElementById('username').innerText = userName;
-        document.getElementById('myIdDisplay').innerText = userId;
-        
-        const statusEl = document.getElementById('status');
-        const scoreDisplay = document.getElementById('score');
-
-        let score = 0;
-        let totalEarned = 0;
-        let clickPower = 1;
-        let refClaimed = 0;
-        let availableRefBonus = 0;
-        let myReferrerId = null; 
-
-        let saveTimeout = null;
-        let db = null;
-
-        try {
-            db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        } catch (e) {
-            showStatus("Ошибка БД", true);
-        }
-
-        function switchView(viewName, btnEl) {
-            document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
-            document.getElementById(viewName + '-view').classList.add('active');
-            btnEl.classList.add('active');
-
-            if (viewName === 'referrals') {
-                loadReferralsData();
-            }
-
-            if (tg.HapticFeedback) tg.HapticFeedback.selectionChanged();
-        }
-
-        function switchSubTab(subTabName, btnEl) {
-            document.querySelectorAll('.sub-tab-content').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('.tab-part-btn').forEach(el => el.classList.remove('active'));
-            document.getElementById('subtab-' + subTabName).classList.add('active');
-            btnEl.classList.add('active');
-
-            if (tg.HapticFeedback) tg.HapticFeedback.selectionChanged();
-        }
-
-        function showStatus(text, isError = false) {
-            statusEl.innerText = text;
-            statusEl.className = isError ? 'status-text error' : 'status-text';
-        }
-
-        function addEarnings(amount) {
-            score += amount;
-            totalEarned += amount;
-            scoreDisplay.innerText = score.toLocaleString();
-        }
-
-        function updateShopUI() {
-            document.getElementById('currentPower').innerText = clickPower;
-            document.getElementById('powerLabel').innerText = `+${clickPower} за тап`;
-
-            const upgradeCostEl = document.getElementById('upgradeCost');
-            const buyPowerBtn = document.getElementById('buyPowerBtn');
-
-            if (clickPower >= 1000) {
-                upgradeCostEl.innerText = "Максимум достигнут!";
-                buyPowerBtn.innerText = "МАКС";
-                buyPowerBtn.disabled = true;
-            } else {
-                upgradeCostEl.innerText = `Цена: ${(clickPower * 100).toLocaleString()} 💰`;
-                buyPowerBtn.disabled = false;
-            }
-        }
-
-        function setupRefLink() {
-            const link = `https://t.me/${BOT_USERNAME}/app#ref_${userId}`;
-            document.getElementById('refLinkInput').value = link;
-        }
-
-        function copyRefLink() {
-            const input = document.getElementById('refLinkInput');
-            input.select();
-            document.execCommand('copy');
-            if (tg.showAlert) tg.showAlert("Ссылка скопирована!");
-            else alert("Ссылка скопирована!");
-        }
-
-        async function loadReferralsData() {
-            if (!db) return;
-            const refListEl = document.getElementById('refList');
-            refListEl.innerHTML = '<p style="color:#8e8e93; font-size:12px;">Загрузка списка...</p>';
-
-            try {
-                const { data: refs, error } = await db
-                    .from('users')
-                    .select('username, total_earned')
-                    .eq('referrer_id', userId);
-
-                if (error) throw error;
-
-                const count = refs ? refs.length : 0;
-                document.getElementById('refCountVal').innerText = count;
-
-                let totalRefEarnings = 0;
-                refListEl.innerHTML = '';
-
-                if (count === 0) {
-                    refListEl.innerHTML = '<p style="color:#8e8e93; font-size:12px;">У вас пока нет рефералов.</p>';
-                } else {
-                    refs.forEach(r => {
-                        const earnedByRef = r.total_earned || 0;
-                        totalRefEarnings += earnedByRef;
-
-                        const item = document.createElement('div');
-                        item.className = 'card-item';
-                        item.style.marginBottom = '6px';
-                        item.innerHTML = `
-                            <div class="card-info">
-                                <h3>👤 ${r.username || 'Игрок'}</h3>
-                                <p>Заработал: ${earnedByRef.toLocaleString()} 💰</p>
-                            </div>
-                            <div style="color:#34c759; font-weight:bold; font-size:12px;">
-                                +${Math.floor(earnedByRef * 0.1).toLocaleString()} 💰 (10%)
-                            </div>
-                        `;
-                        refListEl.appendChild(item);
-                    });
+            init() {
+                this.tg.expand();
+                this.tg.ready();
+                
+                const tgUser = this.tg.initDataUnsafe?.user;
+                if (tgUser) {
+                    this.state.userId = tgUser.id;
+                    this.state.userName = tgUser.first_name;
                 }
 
-                const totalBonusGenerated = (count * 10000) + Math.floor(totalRefEarnings * 0.1);
-                availableRefBonus = Math.max(0, totalBonusGenerated - refClaimed);
+                document.getElementById('username').innerText = this.state.userName;
+                document.getElementById('myIdDisplay').innerText = this.state.userId;
 
-                document.getElementById('refAvailableVal').innerText = `${availableRefBonus.toLocaleString()} 💰`;
-
-                const claimBtn = document.getElementById('claimRefBtn');
-                if (availableRefBonus > 0) {
-                    claimBtn.disabled = false;
-                    claimBtn.innerText = `Забрать ${availableRefBonus.toLocaleString()} 💰`;
-                } else {
-                    claimBtn.disabled = true;
-                    claimBtn.innerText = `Забрать бонус`;
+                try {
+                    this.db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                    this.loadUserData();
+                } catch (e) {
+                    this.updateStatus("Ошибка БД", true);
                 }
 
-            } catch (err) {
-                console.error("Ошибка загрузки рефералов:", err);
-            }
-        }
+                this.setupEventListeners();
+            },
 
-        async function claimRefReward() {
-            if (availableRefBonus <= 0) return;
+            setupEventListeners() {
+                document.getElementById('coinBtn').addEventListener('click', () => {
+                    this.addEarnings(this.state.clickPower);
+                    if (this.tg.HapticFeedback) this.tg.HapticFeedback.impactOccurred('light');
+                    this.saveDebounced();
+                });
 
-            addEarnings(availableRefBonus);
-            refClaimed += availableRefBonus;
-            availableRefBonus = 0;
+                document.addEventListener('visibilitychange', () => {
+                    if (document.visibilityState === 'hidden') this.forceSave();
+                });
+            },
 
-            if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
-            if (tg.showAlert) tg.showAlert("Бонус успешно зачислен!");
+            updateStatus(text, isError = false) {
+                const el = document.getElementById('status');
+                el.innerText = text;
+                el.className = isError ? 'status-text error' : 'status-text';
+            },
 
-            await forceSave();
-            loadReferralsData();
-        }
+            addEarnings(amount) {
+                this.state.score += amount;
+                this.state.totalEarned += amount;
+                document.getElementById('score').innerText = this.state.score.toLocaleString();
+            },
 
-        async function claimManualRef() {
-            const inputVal = document.getElementById('manualRefInput').value.trim();
-            const refMsg = document.getElementById('manualRefMsg');
-            const targetId = parseInt(inputVal);
+            switchView(viewName, btnEl) {
+                document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+                document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
+                
+                document.getElementById(viewName + '-view').classList.add('active');
+                btnEl.classList.add('active');
 
-            if (!targetId || isNaN(targetId)) {
-                refMsg.innerText = "❌ Введи корректный ID";
-                refMsg.style.color = "#ff3b30";
-                return;
-            }
-            if (targetId === userId) {
-                refMsg.innerText = "❌ Нельзя ввести свой ID";
-                refMsg.style.color = "#ff3b30";
-                return;
-            }
+                if (viewName === 'referrals') this.loadReferralsData();
+                if (this.tg.HapticFeedback) this.tg.HapticFeedback.selectionChanged();
+            },
 
-            refMsg.innerText = "⏳ Проверка...";
-            refMsg.style.color = "#ffd700";
+            updateShopUI() {
+                document.getElementById('currentPower').innerText = this.state.clickPower;
+                document.getElementById('powerLabel').innerText = `+${this.state.clickPower} за тап`;
 
-            try {
-                const { data: friendUser, error: err1 } = await db
-                    .from('users')
-                    .select('telegram_id')
-                    .eq('telegram_id', targetId)
-                    .maybeSingle();
+                const upgradeCostEl = document.getElementById('upgradeCost');
+                const buyBtn = document.getElementById('buyPowerBtn');
 
-                if (err1) throw err1;
+                if (this.state.clickPower >= 1000) {
+                    upgradeCostEl.innerText = "Максимум!";
+                    buyBtn.innerText = "МАКС";
+                    buyBtn.disabled = true;
+                } else {
+                    upgradeCostEl.innerText = `Цена: ${(this.state.clickPower * 100).toLocaleString()} 💰`;
+                    buyBtn.disabled = false;
+                }
+            },
 
-                if (!friendUser) {
-                    refMsg.innerText = "❌ Игрок не найден в базе";
-                    refMsg.style.color = "#ff3b30";
+            async buyClickPower() {
+                if (this.state.clickPower >= 1000) return;
+                const cost = this.state.clickPower * 100;
+
+                if (this.state.score < cost) {
+                    if (this.tg.HapticFeedback) this.tg.HapticFeedback.notificationOccurred('error');
+                    alert("Недостаточно монет!");
                     return;
                 }
 
-                addEarnings(10000);
-                myReferrerId = targetId;
-
-                await db.from('users').update({ 
-                    balance: score,
-                    total_earned: totalEarned,
-                    referrer_id: myReferrerId
-                }).eq('telegram_id', userId);
-
-                refMsg.innerText = "✅ Успешно! +10,000 💰";
-                refMsg.style.color = "#34c759";
+                this.state.score -= cost;
+                this.state.clickPower++;
                 
-                if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
-                if (tg.showAlert) tg.showAlert("Бонус +10,000 💰 начислен!");
+                document.getElementById('score').innerText = this.state.score.toLocaleString();
+                this.updateShopUI();
                 
-                setTimeout(() => {
-                    document.getElementById('manualRefBlock').style.display = 'none';
-                }, 2000);
+                if (this.tg.HapticFeedback) this.tg.HapticFeedback.notificationOccurred('success');
+                await this.forceSave();
+            },
 
-            } catch (error) {
-                console.error(error);
-                refMsg.innerText = "❌ Ошибка соединения";
-                refMsg.style.color = "#ff3b30";
-            }
-        }
+            copyMyId() {
+                navigator.clipboard.writeText(this.state.userId.toString())
+                    .then(() => {
+                        if (this.tg.HapticFeedback) this.tg.HapticFeedback.selectionChanged();
+                        if (this.tg.showAlert) this.tg.showAlert("Твой ID скопирован: " + this.state.userId);
+                        else alert("ID скопирован!");
+                    });
+            },
 
-        function getReferrerFromUrl() {
-            let hash = window.location.hash;
-            let match = hash.match(/ref_(\d+)/);
-            
-            if (match && match[1]) {
-                let parsedId = parseInt(match[1]);
-                if (!isNaN(parsedId) && parsedId !== userId) {
-                    return parsedId;
+            // Дальнейшая логика Supabase (Загрузка/Сохранение/Рефералы) 
+            async loadUserData() {
+                if (!this.db) return;
+                this.updateStatus("Подключение...");
+
+                try {
+                    let { data: user, error } = await this.db.from('users')
+                        .select('*').eq('telegram_id', this.state.userId).maybeSingle();
+
+                    if (error) throw error;
+
+                    if (!user) {
+                        await this.db.from('users').insert([{ 
+                            telegram_id: this.state.userId, 
+                            username: this.state.userName, 
+                            balance: 0, 
+                            total_earned: 0,
+                            click_power: 1,
+                            referrer_id: null,
+                            ref_claimed: 0
+                        }]);
+                    } else {
+                        this.state.score = user.balance || 0;
+                        this.state.totalEarned = user.total_earned || this.state.score;
+                        this.state.clickPower = user.click_power || 1;
+                        this.state.refClaimed = user.ref_claimed || 0;
+                        this.state.myReferrerId = user.referrer_id || null;
+                    }
+
+                    document.getElementById('score').innerText = this.state.score.toLocaleString();
+                    this.updateShopUI();
+
+                    document.getElementById('manualRefBlock').style.display = 
+                        this.state.myReferrerId ? 'none' : 'block';
+
+                    this.updateStatus("Сохранено");
+                } catch (err) {
+                    console.error("Ошибка загрузки:", err);
+                    this.updateStatus("Ошибка БД", true);
+                }
+            },
+
+            async forceSave() {
+                if (!this.db) return;
+                try {
+                    this.updateStatus("Сохранение...");
+                    await this.db.from('users').update({ 
+                        balance: this.state.score, 
+                        total_earned: this.state.totalEarned,
+                        click_power: this.state.clickPower,
+                        ref_claimed: this.state.refClaimed
+                    }).eq('telegram_id', this.state.userId);
+                    this.updateStatus("Сохранено!");
+                } catch (err) {
+                    this.updateStatus("Не сохранено!", true);
+                }
+            },
+
+            saveDebounced() {
+                this.updateStatus("Есть изменения...");
+                clearTimeout(this.saveTimeout);
+                this.saveTimeout = setTimeout(() => this.forceSave(), 300);
+            },
+
+            async loadReferralsData() {
+                if (!this.db) return;
+                const refListEl = document.getElementById('refList');
+                refListEl.innerHTML = '<p style="color:#8e8e93; font-size:12px;">Загрузка списка...</p>';
+
+                try {
+                    const { data: refs, error } = await this.db.from('users')
+                        .select('username, total_earned')
+                        .eq('referrer_id', this.state.userId);
+
+                    if (error) throw error;
+
+                    const count = refs ? refs.length : 0;
+                    document.getElementById('refCountVal').innerText = count;
+
+                    let totalRefEarnings = 0;
+                    refListEl.innerHTML = '';
+
+                    if (count === 0) {
+                        refListEl.innerHTML = '<p style="color:#8e8e93; font-size:12px;">У вас пока нет рефералов.</p>';
+                    } else {
+                        refs.forEach(r => {
+                            const earnedByRef = r.total_earned || 0;
+                            totalRefEarnings += earnedByRef;
+                            refListEl.innerHTML += `
+                                <div class="card-item" style="margin-bottom: 6px;">
+                                    <div class="card-info">
+                                        <h3>👤 ${r.username || 'Игрок'}</h3>
+                                        <p>Заработал: ${earnedByRef.toLocaleString()} 💰</p>
+                                    </div>
+                                    <div style="color:#34c759; font-weight:bold; font-size:12px;">
+                                        +${Math.floor(earnedByRef * 0.1).toLocaleString()} 💰
+                                    </div>
+                                </div>`;
+                        });
+                    }
+
+                    const totalBonusGenerated = (count * 10000) + Math.floor(totalRefEarnings * 0.1);
+                    this.state.availableRefBonus = Math.max(0, totalBonusGenerated - this.state.refClaimed);
+                    document.getElementById('refAvailableVal').innerText = `${this.state.availableRefBonus.toLocaleString()} 💰`;
+
+                    const claimBtn = document.getElementById('claimRefBtn');
+                    claimBtn.disabled = this.state.availableRefBonus <= 0;
+                    claimBtn.innerText = this.state.availableRefBonus > 0 
+                        ? `Забрать ${this.state.availableRefBonus.toLocaleString()} 💰` 
+                        : 'Забрать бонус';
+
+                } catch (err) {
+                    console.error("Ошибка рефералов:", err);
+                }
+            },
+
+            async claimRefReward() {
+                if (this.state.availableRefBonus <= 0) return;
+                this.addEarnings(this.state.availableRefBonus);
+                this.state.refClaimed += this.state.availableRefBonus;
+                this.state.availableRefBonus = 0;
+
+                if (this.tg.HapticFeedback) this.tg.HapticFeedback.notificationOccurred('success');
+                if (this.tg.showAlert) this.tg.showAlert("Бонус зачислен!");
+
+                await this.forceSave();
+                this.loadReferralsData();
+            },
+
+            async claimManualRef() {
+                const targetId = parseInt(document.getElementById('manualRefInput').value.trim());
+                const refMsg = document.getElementById('manualRefMsg');
+
+                if (!targetId || isNaN(targetId) || targetId === this.state.userId) {
+                    refMsg.innerText = "❌ Некорректный ID";
+                    refMsg.style.color = "var(--accent-red)";
+                    return;
+                }
+
+                refMsg.innerText = "⏳ Проверка...";
+                refMsg.style.color = "var(--accent-gold)";
+
+                try {
+                    const { data, error } = await this.db.from('users')
+                        .select('telegram_id').eq('telegram_id', targetId).maybeSingle();
+
+                    if (!data) {
+                        refMsg.innerText = "❌ Игрок не найден";
+                        refMsg.style.color = "var(--accent-red)";
+                        return;
+                    }
+
+                    this.addEarnings(10000);
+                    this.state.myReferrerId = targetId;
+
+                    await this.db.from('users').update({ 
+                        balance: this.state.score, 
+                        total_earned: this.state.totalEarned, 
+                        referrer_id: targetId 
+                    }).eq('telegram_id', this.state.userId);
+
+                    refMsg.innerText = "✅ +10,000 💰";
+                    refMsg.style.color = "var(--accent-green)";
+                    setTimeout(() => document.getElementById('manualRefBlock').style.display = 'none', 2000);
+
+                } catch (error) {
+                    refMsg.innerText = "❌ Ошибка соединения";
+                    refMsg.style.color = "var(--accent-red)";
                 }
             }
-            return null;
-        }
+        };
 
-        async function loadUserData() {
-            if (!db) return;
-            showStatus("Подключение...");
-
-            try {
-                let { data: user, error } = await db.from('users').select('*').eq('telegram_id', userId).maybeSingle();
-
-                if (error) throw error;
-
-                if (!user) {
-                    let refId = getReferrerFromUrl();
-                    myReferrerId = refId; 
-
-                    let { error: insertErr } = await db.from('users').insert([{ 
-                        telegram_id: userId, 
-                        username: userName, 
-                        balance: 0, 
-                        total_earned: 0,
-                        click_power: 1,
-                        businesses: {},
-                        last_claim: new Date(),
-                        referrer_id: refId,
-                        ref_claimed: 0
-                    }]);
-
-                    if (insertErr) throw insertErr;
-                    score = 0;
-                    totalEarned = 0;
-                    clickPower = 1;
-                    refClaimed = 0;
-                } else {
-                    score = user.balance || 0;
-                    totalEarned = user.total_earned || score;
-                    clickPower = user.click_power || 1;
-                    refClaimed = user.ref_claimed || 0;
-                    myReferrerId = user.referrer_id || null;
-                }
-
-                scoreDisplay.innerText = score.toLocaleString();
-                setupRefLink();
-                updateShopUI();
-
-                if (!myReferrerId) {
-                    document.getElementById('manualRefBlock').style.display = 'block';
-                } else {
-                    document.getElementById('manualRefBlock').style.display = 'none';
-                }
-
-                showStatus("Сохранено");
-            } catch (err) {
-                console.error("Ошибка загрузки:", err);
-                showStatus("Ошибка БД", true);
-            }
-        }
-
-        async function forceSave() {
-            if (!db) return;
-            try {
-                showStatus("Сохранение...");
-                let { error } = await db.from('users').update({ 
-                    balance: score, 
-                    total_earned: totalEarned,
-                    click_power: clickPower,
-                    ref_claimed: refClaimed
-                }).eq('telegram_id', userId);
-
-                if (error) throw error;
-                showStatus("Сохранено!");
-            } catch (err) {
-                console.error("Ошибка сохранения:", err);
-                showStatus("Не сохранено!", true);
-            }
-        }
-
-        function saveDebounced() {
-            showStatus("Есть изменения...");
-            clearTimeout(saveTimeout);
-            saveTimeout = setTimeout(forceSave, 300);
-        }
-
-        async function buyClickPower() {
-            if (clickPower >= 1000) return;
-            const cost = clickPower * 100;
-
-            if (score < cost) {
-                if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
-                alert("Недостаточно монет!");
-                return;
-            }
-
-            score -= cost;
-            clickPower++;
-
-            scoreDisplay.innerText = score.toLocaleString();
-            updateShopUI();
-
-            if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
-            await forceSave();
-        }
-        
-        function copyMyId() {
-            const tempInput = document.createElement("input");
-            tempInput.value = userId;
-            document.body.appendChild(tempInput);
-            tempInput.select();
-            document.execCommand("copy");
-            document.body.removeChild(tempInput);
-            
-            if (tg.HapticFeedback) tg.HapticFeedback.selectionChanged();
-            if (tg.showAlert) {
-                tg.showAlert("Твой ID скопирован: " + userId);
-            } else {
-                alert("ID скопирован!");
-            }
-        }
-
-        document.getElementById('coinBtn').addEventListener('click', () => {
-            addEarnings(clickPower);
-
-            if (tg.HapticFeedback) {
-                tg.HapticFeedback.impactOccurred('light');
-            }
-
-            saveDebounced();
-        });
-
-        document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'hidden') {
-                forceSave();
-            }
-        });
-
-        loadUserData();
+        // Запуск приложения
+        window.addEventListener('DOMContentLoaded', () => app.init());
     </script>
 </body>
 </html>
