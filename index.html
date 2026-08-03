@@ -333,17 +333,14 @@
 
         <!-- 4. Business View (Спонсоры и Ваучеры) -->
         <div id="business-view" class="view">
-            <!-- Переключатель вкладок внутри раздела Бизнес -->
             <div class="business-nav">
                 <button class="business-nav-btn active" id="tab-sponsors" onclick="app.switchBusinessTab('sponsors')">Спонсоры</button>
                 <button class="business-nav-btn" id="tab-vouchers" onclick="app.switchBusinessTab('vouchers')">Ваучеры</button>
             </div>
 
-            <!-- Вкладка со Спонсорами -->
             <div id="sponsors-container" style="width: 100%; display: flex; flex-direction: column; align-items: center;">
                 <h2 style="font-size: 16px; margin-bottom: 15px; color: #fff;">Доступные предложения</h2>
                 
-                <!-- Пример спонсора 1 (например, кофейня или кафе) -->
                 <div class="sponsor-card">
                     <h3>☕ Кофейня "Бодрость" (Пример)</h3>
                     <p class="desc">Бесплатный капучино или скидка 50% на любой десерт в нашей сети кофеен.</p>
@@ -353,7 +350,6 @@
                     </div>
                 </div>
 
-                <!-- Пример спонсора 2 (например, точка мороженого или фастфуд) -->
                 <div class="sponsor-card">
                     <h3>🍦 Точка Мороженого (Пример)</h3>
                     <p class="desc">Ваучер на 2 рожка крафтового мороженого. Выдаётся на кассе по промокоду.</p>
@@ -368,14 +364,60 @@
                 </p>
             </div>
 
-            <!-- Вкладка с Ваучерами -->
             <div id="vouchers-container" style="width: 100%; display: none; flex-direction: column; align-items: center;">
-                <div id="my-vouchers-list" style="width: 100%; display: flex; flex-direction: column; align-items: center;">
-                    <!-- Сюда JS будет подгружать купленные ваучеры -->
-                </div>
+                <div id="my-vouchers-list" style="width: 100%; display: flex; flex-direction: column; align-items: center;"></div>
                 <p id="no-vouchers-msg" style="color: var(--text-muted); font-size: 14px; margin-top: 20px; text-align: center;">
                     У вас пока нет купленных ваучеров.<br>Перейдите во вкладку "Спонсоры".
                 </p>
+            </div>
+        </div>
+
+        <!-- 5. Profile View (Информация о статусе аккаунта) -->
+        <div id="profile-view" class="view">
+            <h2 style="font-size: 18px; margin-bottom: 15px; color: #fff;">👤 Статус аккаунта</h2>
+            <div class="list-container">
+                <div class="card-item">
+                    <div class="card-info">
+                        <h3>Имя игрока</h3>
+                        <p id="profileName">Загрузка...</p>
+                    </div>
+                </div>
+                <div class="card-item">
+                    <div class="card-info">
+                        <h3>Telegram ID</h3>
+                        <p id="profileId">Загрузка...</p>
+                    </div>
+                </div>
+                <div class="card-item">
+                    <div class="card-info">
+                        <h3>Текущий баланс</h3>
+                        <p id="profileBalance" style="color: var(--accent-gold); font-weight: bold;">0 💰</p>
+                    </div>
+                </div>
+                <div class="card-item">
+                    <div class="card-info">
+                        <h3>Всего заработано</h3>
+                        <p id="profileTotalEarned">0 💰</p>
+                    </div>
+                </div>
+                <div class="card-item">
+                    <div class="card-info">
+                        <h3>Сила тапа</h3>
+                        <p id="profileClickPower">1</p>
+                    </div>
+                </div>
+                <div class="card-item">
+                    <div class="card-info">
+                        <h3>Пригласивший друг (ID)</h3>
+                        <p id="profileReferrer">Нет</p>
+                    </div>
+                </div>
+                <div class="card-item">
+                    <div class="card-info">
+                        <h3>Приглашено рефералов</h3>
+                        <p id="profileRefCount">0</p>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -392,14 +434,15 @@
         <button class="nav-btn active" onclick="app.switchView('main', this)">
             <span class="icon">🪙</span><span>Главная</span>
         </button>
-        <!-- Кнопка раздела Бизнес -->
         <button class="nav-btn" onclick="app.switchView('business', this)">
             <span class="icon">💼</span><span>Бизнес</span>
+        </button>
+        <button class="nav-btn" onclick="app.switchView('profile', this)">
+            <span class="icon">👤</span><span>Профиль</span>
         </button>
     </div>
 
     <script>
-        // Конфигурация Supabase
         const SUPABASE_URL = 'https://bgrvgzgqtryudztngkqm.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_bKa8iusANSHGJ3KEgS8nJg_3TxrJdmZ';
         
@@ -415,7 +458,8 @@
                 refClaimed: 0,
                 availableRefBonus: 0,
                 myReferrerId: null,
-                vouchers: [] // Массив для хранения купленных ваучеров
+                refCount: 0,
+                vouchers: []
             },
             saveTimeout: null,
 
@@ -466,7 +510,6 @@
                 document.getElementById('score').innerText = this.state.score.toLocaleString();
             },
 
-            // Переключение основных вкладок снизу
             switchView(viewName, btnEl) {
                 document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
                 document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
@@ -475,10 +518,11 @@
                 btnEl.classList.add('active');
 
                 if (viewName === 'referrals') this.loadReferralsData();
+                if (viewName === 'profile') this.updateProfileUI();
+
                 if (this.tg.HapticFeedback) this.tg.HapticFeedback.selectionChanged();
             },
 
-            // Переключение вкладок внутри раздела Бизнес (Спонсоры / Ваучеры)
             switchBusinessTab(tabName) {
                 document.getElementById('tab-sponsors').classList.remove('active');
                 document.getElementById('tab-vouchers').classList.remove('active');
@@ -495,7 +539,16 @@
                 if (this.tg.HapticFeedback) this.tg.HapticFeedback.selectionChanged();
             },
 
-            // Покупка ваучера
+            updateProfileUI() {
+                document.getElementById('profileName').innerText = this.state.userName;
+                document.getElementById('profileId').innerText = this.state.userId;
+                document.getElementById('profileBalance').innerText = `${this.state.score.toLocaleString()} 💰`;
+                document.getElementById('profileTotalEarned').innerText = `${this.state.totalEarned.toLocaleString()} 💰`;
+                document.getElementById('profileClickPower').innerText = `+${this.state.clickPower} за тап`;
+                document.getElementById('profileReferrer').innerText = this.state.myReferrerId ? this.state.myReferrerId : 'Отсутствует';
+                document.getElementById('profileRefCount').innerText = this.state.refCount;
+            },
+
             async buyVoucher(sponsorName, prizeDesc, cost) {
                 if (this.state.score < cost) {
                     if (this.tg.HapticFeedback) this.tg.HapticFeedback.notificationOccurred('error');
@@ -504,11 +557,9 @@
                     return;
                 }
 
-                // Списываем баланс
                 this.state.score -= cost;
                 document.getElementById('score').innerText = this.state.score.toLocaleString();
                 
-                // Генерируем уникальный промокод для ваучера
                 const randomCode = "VCHR-" + Math.random().toString(36).substr(2, 6).toUpperCase();
                 
                 const newVoucher = {
@@ -523,13 +574,9 @@
                 if (this.tg.HapticFeedback) this.tg.HapticFeedback.notificationOccurred('success');
                 if (this.tg.showAlert) this.tg.showAlert(`✅ Вы успешно приобрели ваучер от "${sponsorName}"! Найти его можно во вкладке "Ваучеры".`);
                 
-                await this.forceSave(); // Сохраняем обновленный баланс
-                
-                // Примечание: Для сохранения самих ваучеров в Supabase нужно будет добавить 
-                // колонку 'vouchers' (тип JSONB) в таблицу 'users' или создать отдельную таблицу.
+                await this.forceSave();
             },
 
-            // Отрисовка списка купленных ваучеров
             renderVouchers() {
                 const listEl = document.getElementById('my-vouchers-list');
                 const noMsg = document.getElementById('no-vouchers-msg');
@@ -624,10 +671,13 @@
                         this.state.clickPower = user.click_power || 1;
                         this.state.refClaimed = user.ref_claimed || 0;
                         this.state.myReferrerId = user.referrer_id || null;
-                        
-                        // Если добавишь колонку vouchers в Supabase, раскомментируй строку ниже:
-                        // this.state.vouchers = user.vouchers || []; 
                     }
+
+                    // Подсчитаем количество рефералов для профиля
+                    const { count } = await this.db.from('users')
+                        .select('*', { count: 'exact', head: true })
+                        .eq('referrer_id', this.state.userId);
+                    this.state.refCount = count || 0;
 
                     document.getElementById('score').innerText = this.state.score.toLocaleString();
                     this.updateShopUI();
@@ -653,9 +703,6 @@
                         click_power: this.state.clickPower,
                         ref_claimed: this.state.refClaimed
                     };
-                    
-                    // Если добавишь колонку vouchers в Supabase, раскомментируй строку ниже:
-                    // updateData.vouchers = this.state.vouchers;
 
                     await this.db.from('users').update(updateData).eq('telegram_id', this.state.userId);
                     this.updateStatus("Сохранено!");
@@ -683,6 +730,7 @@
                     if (error) throw error;
 
                     const count = refs ? refs.length : 0;
+                    this.state.refCount = count;
                     document.getElementById('refCountVal').innerText = count;
 
                     let totalRefEarnings = 0;
