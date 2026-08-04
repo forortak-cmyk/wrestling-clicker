@@ -344,8 +344,8 @@
         
         <!-- 1. Shop -->
         <div id="shop-view" class="view">
-            <h2 style="margin-bottom: 4px; font-size: 18px;">🛒 Բարելավման խանութ</h2>
-            <p style="margin-bottom: 15px; font-size: 12px; color: var(--accent-red);">Առավելագույն ուժը՝ 500 հարվածի դիմաց</p>
+            <h2 style="margin-bottom: 4px; font-size: 18px;">🛒 Բարելավումների խանութ</h2>
+            <p style="margin-bottom: 15px; font-size: 12px; color: var(--accent-red);">Առավելագույն ուժը՝ մինչև 500 միավոր մեկ սեղմման համար</p>
             <div class="list-container">
                 <div class="card-item">
                     <div class="card-info">
@@ -377,40 +377,40 @@
         <!-- 2. Referrals -->
         <div id="referrals-view" class="view">
             <div class="ref-banner">
-                <h2>🤝 Հրավիրիր ընկերներին</h2>
-                <p>Յուրաքանչյուր ընկերոջ համար՝ <span class="ref-bonus-highlight">+10,000 💰</span></p>
-                <p>Գումարած <span class="ref-bonus-highlight">10%</span> նրանց վաստակից:</p>
+                <h2>🤝 Հրավիրե՛ք ընկերներին</h2>
+                <p>Յուրաքանչյուր հրավիրված ընկերոջ համար ստացե՛ք <span class="ref-bonus-highlight">+10,000 💰</span></p>
+                <p>Ինչպես նաև նրանց վաստակի <span class="ref-bonus-highlight">10%-ը</span>:</p>
             </div>
             <div class="ref-banner" style="background: #2c2c2e; padding: 12px;">
-                <h3 style="font-size: 13px; color: #8e8e93; margin-bottom: 5px; text-align: left;">Քո ID-ն:</h3>
+                <h3 style="font-size: 13px; color: #8e8e93; margin-bottom: 5px; text-align: left;">Ձեր ID-ն:</h3>
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <span id="myIdDisplay" style="font-size: 20px; font-weight: bold; color: #ffd700;">Բեռնվում է...</span>
                     <button class="action-btn" onclick="app.copyMyId()" style="margin: 0;">Պատճենել</button>
                 </div>
             </div>
             <div id="manualRefBlock" class="ref-banner" style="display: none; padding-bottom: 10px;">
-                <h3 style="font-size: 15px; margin-bottom: 8px;">Մուտքագրիր ընկերոջ ID-ն 🎁</h3>
+                <h3 style="font-size: 15px; margin-bottom: 8px;">Մուտքագրեք հրավիրողի ID-ն 🎁</h3>
                 <div class="ref-input-group" style="margin-bottom: 5px;">
-                    <input type="number" id="manualRefInput" class="ref-input" placeholder="Հրավիրողի ID-ն">
-                    <button class="action-btn success-btn" onclick="app.claimManualRef()">Վերցնել</button>
+                    <input type="number" id="manualRefInput" class="ref-input" placeholder="Օրինակ՝ 123456789">
+                    <button class="action-btn success-btn" onclick="app.claimManualRef()">Կիրառել</button>
                 </div>
                 <p id="manualRefMsg" style="font-size: 11px; font-weight: bold;"></p>
             </div>
             <div class="ref-stats-grid">
                 <div class="stat-card">
-                    <div class="title">Հրավիրված</div>
+                    <div class="title">Հրավիրվածներ</div>
                     <div class="value" id="refCountVal">0</div>
                 </div>
                 <div class="stat-card">
-                    <div class="title">Հասանելի</div>
+                    <div class="title">Հասանելի բոնուս</div>
                     <div class="value" style="color: #34c759;" id="refAvailableVal">0 💰</div>
                 </div>
             </div>
             <button class="action-btn success-btn" id="claimRefBtn" style="width: 100%; max-width: 400px; padding: 12px; margin-bottom: 15px;" onclick="app.claimRefReward()" disabled>
-                Վերցնել բոնուսը
+                Ստանալ բոնուսը
             </button>
             <div class="list-container">
-                <h3 style="font-size: 14px; color: #8e8e93; margin-bottom: 5px;">Ձեր հղղումով մուտք գործածները:</h3>
+                <h3 style="font-size: 14px; color: #8e8e93; margin-bottom: 5px;">Ձեր հղումով միացած օգտատերերը՝</h3>
                 <div id="refList">Բեռնվում է...</div>
             </div>
         </div>
@@ -422,15 +422,15 @@
 
             <div class="clicker-wrapper">
                 <div class="coin" id="coinBtn">
-                    <span>ՍԵՂՄԻՐ</span>
-                    <span class="coin-sub" id="powerLabel">+1 հարվածի դիմաց</span>
+                    <span>ՍԵՂՄԵՔ</span>
+                    <span class="coin-sub" id="powerLabel">+1 մեկ սեղմման համար</span>
                 </div>
             </div>
 
             <div class="roulette-container">
                 <h3 style="font-size: 15px; margin-bottom: 8px;">🎰 Ամենօրյա անիվ</h3>
                 <div class="roulette-wheel" id="rouletteWheel">🎁</div>
-                <div class="roulette-result" id="rouletteResult">Փորձիր բախտդ:</div>
+                <div class="roulette-result" id="rouletteResult">Փորձե՛ք ձեր բախտը</div>
                 <div class="timer-display" id="rouletteTimer">Ստուգվում է հասանելիությունը...</div>
                 <button class="action-btn success-btn" id="spinBtn" onclick="app.spinRoulette()" style="width: 100%; padding: 10px; font-size: 13px;" disabled>Պտտել</button>
             </div>
@@ -444,72 +444,72 @@
             </div>
             <div id="sponsors-container" style="width: 100%; display: flex; flex-direction: column; align-items: center; padding-bottom: 20px;">
                 <div class="sponsor-card">
-                    <h3>☕ Սրճարան "Առдություն"</h3>
-                    <p class="desc">50% զեղչ ցանկացած աղանդերի վրա սուրճ գնելիս.</p>
+                    <h3>☕ Սրճարան «Առավոտ»</h3>
+                    <p class="desc">50% զեղչ ցանկացած աղանդերի համար՝ սուրճ գնելիս։</p>
                     <div class="sponsor-row">
                         <span class="sponsor-price">50,000 💰</span>
-                        <button class="action-btn" onclick="app.buyVoucher('Սրճարան Առдություն', '50% զեղչ աղանդերի վրա', 50000)">Ձեռք բերել</button>
+                        <button class="action-btn" onclick="app.buyVoucher('Սրճարան «Առավոտ»', '50% զեղչ աղանդերի համար', 50000)">Ձեռք բերել</button>
                     </div>
                 </div>
                 <div class="sponsor-card">
-                    <h3>🍦 Պաղպաղակի կետ</h3>
-                    <p class="desc">Վաուչեր 2 գնդիկ խմորային պաղպաղակի համար.</p>
+                    <h3>🍦 Պաղպաղակի կιοσκ</h3>
+                    <p class="desc">Վաուչեր 2 գնդիկ անվճար տնական պաղպաղակի համար։</p>
                     <div class="sponsor-row">
                         <span class="sponsor-price">100,000 💰</span>
-                        <button class="action-btn" onclick="app.buyVoucher('Պաղպաղակի կետ', '2 անվճար գնդիկ', 100000)">Ձեռք բերել</button>
+                        <button class="action-btn" onclick="app.buyVoucher('Պաղպաղակի կιοσκ', '2 անվճար գնդիկ պաղպաղակ', 100000)">Ձեռք բերել</button>
                     </div>
                 </div>
                 <div class="sponsor-card">
-                    <h3>✂️ Վարսավիրանոց "Ուսաչ"</h3>
-                    <p class="desc">30% զեղչ տղամարդկանց ցանկացած սանրվածքի կամ մորուքի ձևավորման համար.</p>
+                    <h3>✂️ Վարսավիրանոց «Ուսաչ»</h3>
+                    <p class="desc">30% զեղչ տղամարդկանց ցանկացած սանրվածքի կամ մորուքի ձևավորման համար։</p>
                     <div class="sponsor-row">
                         <span class="sponsor-price">200,000 💰</span>
-                        <button class="action-btn" onclick="app.buyVoucher('Վարսավիրանոց Ուսաչ', '30% զեղչ սանրվածքի վրա', 200000)">Ձեռք բերել</button>
+                        <button class="action-btn" onclick="app.buyVoucher('Վարսավիրանոց «Ուսաչ»', '30% զեղչ սանրվածքի վրա', 200000)">Ձեռք բերել</button>
                     </div>
                 </div>
                 <div class="sponsor-card">
-                    <h3>🍕 Պիցցերիա "Մամմա Միա"</h3>
-                    <p class="desc">Մեկ միջին "Մարգարիտա" պիցցա լրիվ անվճար!</p>
+                    <h3>🍕 Պիցցերիա «Մամա Միա»</h3>
+                    <p class="desc">Մեկ միջին չափի «Մարգարիտա» պիցցա՝ լիովին անվճար։</p>
                     <div class="sponsor-row">
                         <span class="sponsor-price">300,000 💰</span>
-                        <button class="action-btn" onclick="app.buyVoucher('Պիցցերիա Մամմա Միա', 'Անվճար Մարգարիտա', 300000)">Ձեռք բերել</button>
+                        <button class="action-btn" onclick="app.buyVoucher('Պիցցերիա «Մամա Միա»', 'Անվճար Մարգարիտա պիցցա', 300000)">Ձեռք բերել</button>
                     </div>
                 </div>
                 <div class="sponsor-card">
-                    <h3>💪 Ֆիտնես ակումբ "Տիտան"</h3>
-                    <p class="desc">Մեկանգամյա անվճար այցելություն մարզասրահ՝ մարզչի հետ.</p>
+                    <h3>💪 Ֆիտնես ակումբ «Տիտան»</h3>
+                    <p class="desc">Մեկանգամյա անվճար այցելություն մարզասրահ՝ մասնագետ մարզչի ուղեկցությամբ։</p>
                     <div class="sponsor-row">
                         <span class="sponsor-price">500,000 💰</span>
-                        <button class="action-btn" onclick="app.buyVoucher('Ֆիտնես ակումբ Տիտան', 'Մեկանգամյա այցելություն', 500000)">Ձեռք բերել</button>
+                        <button class="action-btn" onclick="app.buyVoucher('Ֆիտնես ակումբ «Տիտան»', 'Մեկանգամյա այցելություն մարզչի հետ', 500000)">Ձեռք բերել</button>
                     </div>
                 </div>
                 <div class="sponsor-card">
                     <h3>👟 Մարզակոշիկների խանութ</h3>
-                    <p class="desc">Կտրոն 1000₽ զեղչով ցանկացած զույգ կոշիկ գնելիս.</p>
+                    <p class="desc">Նվեր-կտրոն 1000 ռուբլի զեղչով՝ ցանկացած զույգ կոշիկ գնելիս։</p>
                     <div class="sponsor-row">
                         <span class="sponsor-price">1,000,000 💰</span>
-                        <button class="action-btn" onclick="app.buyVoucher('Մարզակոշիկների խանութ', 'Կտրոն 1000₽ զեղչով', 1000000)">Ձեռք բերել</button>
+                        <button class="action-btn" onclick="app.buyVoucher('Մարզակոշիկների խանութ', 'Կտրոն 1000 ռուբլի զեղչով', 1000000)">Ձեռք բերել</button>
                     </div>
                 </div>
             </div>
             <div id="vouchers-container" style="width: 100%; display: none; flex-direction: column; align-items: center;">
                 <div id="my-vouchers-list" style="width: 100%; display: flex; flex-direction: column; align-items: center;"></div>
                 <p id="no-vouchers-msg" style="color: var(--text-muted); font-size: 14px; margin-top: 20px; text-align: center;">
-                    Դուք դեռ չունեք գնված վաուչերներ:<br>Անցեք "Հովանավորներ" բաժին:
+                    Դուք դեռևս չունեք գնված վաուչերներ:<br>Անցե՛ք «Հովանավորներ» բաժին:
                 </p>
             </div>
         </div>
 
         <!-- 5. Profile View -->
         <div id="profile-view" class="view">
-            <h2 style="font-size: 18px; margin-bottom: 15px; color: #fff;">👤 Ակի հաշվի կարգավիճակ</h2>
+            <h2 style="font-size: 18px; margin-bottom: 15px; color: #fff;">👤 Հաշվի կարգավիճակ</h2>
             <div class="list-container">
                 <div class="card-item"><div class="card-info"><h3>Խաղացողի անունը</h3><p id="profileName">Բեռնվում է...</p></div></div>
                 <div class="card-item"><div class="card-info"><h3>Telegram ID</h3><p id="profileId">Բեռնվում է...</p></div></div>
                 <div class="card-item"><div class="card-info"><h3>Ընթացիկ հաշվեկշիռ</h3><p id="profileBalance" style="color: var(--accent-gold); font-weight: bold;">0 💰</p></div></div>
-                <div class="card-item"><div class="card-info"><h3>Ընդհանուր վաստակած</h3><p id="profileTotalEarned">0 💰</p></div></div>
-                <div class="card-item"><div class="card-info"><h3>Հարվածի ուժը</h3><p id="profileClickPower">1</p></div></div>
-                <div class="card-item"><div class="card-info"><h3>Հրավիրող ընկեր (ID)</h3><p id="profileReferrer">Չկա</p></div></div>
+                <div class="card-item"><div class="card-info"><h3>Ընդհանուր վաստակածը</h3><p id="profileTotalEarned">0 💰</p></div></div>
+                <div class="card-item"><div class="card-info"><h3>Սեղմման ուժը</h3><p id="profileClickPower">1</p></div></div>
+                <div class="card-item"><div class="card-info"><h3>Հրավիրող (ID)</h3><p id="profileReferrer">Բացակայում է</p></div></div>
                 <div class="card-item"><div class="card-info"><h3>Հրավիրվածների քանակը</h3><p id="profileRefCount">0</p></div></div>
             </div>
         </div>
@@ -637,7 +637,7 @@
                 document.getElementById('profileId').innerText = this.state.userId;
                 document.getElementById('profileBalance').innerText = `${this.state.score.toLocaleString()} 💰`;
                 document.getElementById('profileTotalEarned').innerText = `${this.state.totalEarned.toLocaleString()} 💰`;
-                document.getElementById('profileClickPower').innerText = `+${this.state.clickPower} հարվածի դիմաց`;
+                document.getElementById('profileClickPower').innerText = `+${this.state.clickPower} մեկ սեղմման համար`;
                 document.getElementById('profileReferrer').innerText = this.state.myReferrerId ? this.state.myReferrerId : 'Բացակայում է';
                 document.getElementById('profileRefCount').innerText = this.state.refCount;
             },
@@ -645,8 +645,8 @@
             async buyVoucher(sponsorName, prizeDesc, cost) {
                 if (this.state.score < cost) {
                     if (this.tg.HapticFeedback) this.tg.HapticFeedback.notificationOccurred('error');
-                    if (this.tg.showAlert) this.tg.showAlert("❌ Մետաղադրամները բավարար չեն գնման համար!");
-                    else alert("Մետաղադրամները բավարար չեն!");
+                    if (this.tg.showAlert) this.tg.showAlert("❌ Մետաղադրամները բավարար չեն գնման համար:");
+                    else alert("Մետաղադրամները բավարար չեն:");
                     return;
                 }
 
@@ -658,13 +658,13 @@
                     sponsor: sponsorName,
                     prize: prizeDesc,
                     code: randomCode,
-                    date: new Date().toLocaleDateString()
+                    date: new Date().toLocaleDateString('hy-AM')
                 };
 
                 this.state.vouchers.push(newVoucher);
 
                 if (this.tg.HapticFeedback) this.tg.HapticFeedback.notificationOccurred('success');
-                if (this.tg.showAlert) this.tg.showAlert(`✅ Դուք հաջողությամբ ձեռք բերեցիք վաուչեր "${sponsorName}"-ից: Այն կարող եք գտնել "Վաուչերներ" բաժնում:`);
+                if (this.tg.showAlert) this.tg.showAlert(`✅ Դուք հաջողությամբ ձեռք բերեցիք վաուչեր "${sponsorName}" հովանավորից: Այն կարող եք գտնել «Վաուչերներ» բաժնում:`);
                 
                 await this.forceSave();
             },
@@ -684,16 +684,16 @@
                     <div class="voucher-card">
                         <h3>🎟️ ${v.sponsor}</h3>
                         <p style="font-size: 13px; color: #fff; margin-bottom: 5px;">${v.prize}</p>
-                        <p style="font-size: 12px; color: #aaa;">Ձեր պրոմոկոդը:</p>
+                        <p style="font-size: 12px; color: #aaa;">Ձեր պրոմոկոդը՝</p>
                         <div class="voucher-code">${v.code}</div>
-                        <p style="font-size: 10px; color: var(--text-muted); margin-top: 5px;">Գնման ամսաթիվը: ${v.date}</p>
+                        <p style="font-size: 10px; color: var(--text-muted); margin-top: 5px;">Ձեռք բերման ամսաթիվը՝ ${v.date}</p>
                     </div>
                 `).join('');
             },
 
             updateShopUI() {
                 document.querySelectorAll('.currentPowerDisplay').forEach(el => el.innerText = this.state.clickPower);
-                document.getElementById('powerLabel').innerText = `+${this.state.clickPower} հարվածի դիմաց`;
+                document.getElementById('powerLabel').innerText = `+${this.state.clickPower} մեկ սեղմման համար`;
 
                 this.setupShopItem(1, 1, 100);
                 this.setupShopItem(2, 5, 450);
@@ -705,7 +705,7 @@
                 const btnEl = document.getElementById(`buyBtn${id}`);
                 
                 if (this.state.clickPower + powerAdd > this.MAX_POWER) {
-                    costEl.innerText = "Առավելագույնը!";
+                    costEl.innerText = "Առավելագույնն է";
                     btnEl.innerText = "ՄԱՔՍ";
                     btnEl.disabled = true;
                 } else {
@@ -722,7 +722,7 @@
 
                 if (this.state.score < cost) {
                     if (this.tg.HapticFeedback) this.tg.HapticFeedback.notificationOccurred('error');
-                    alert("Մետաղադրամները բավարար չեն!");
+                    alert("Մետաղադրամները բավարար չեն:");
                     return;
                 }
 
@@ -740,8 +740,8 @@
                 navigator.clipboard.writeText(this.state.userId.toString())
                     .then(() => {
                         if (this.tg.HapticFeedback) this.tg.HapticFeedback.selectionChanged();
-                        if (this.tg.showAlert) this.tg.showAlert("Քո ID-ն պատճենված է: " + this.state.userId);
-                        else alert("ID-ն պատճենված է!");
+                        if (this.tg.showAlert) this.tg.showAlert("Ձեր ID-ն պատճենված է՝ " + this.state.userId);
+                        else alert("ID-ն պատճենված է:");
                     });
             },
 
@@ -835,7 +835,7 @@
 
                     const listEl = document.getElementById('refList');
                     if (refs.length === 0) {
-                        listEl.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">Դուք դեռ չունեք հրավիրվածներ:</p>';
+                        listEl.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">Դուք դեռևս հրավիրվածներ չունեք:</p>';
                         return;
                     }
 
@@ -851,7 +851,7 @@
                         </div>
                     `).join('');
                 } catch (e) {
-                    console.error("Հղումների սխալ:", e);
+                    console.error("Հղումների բեռնման սխալ:", e);
                 }
             },
 
@@ -865,7 +865,7 @@
                 document.getElementById('claimRefBtn').disabled = true;
 
                 if (this.tg.HapticFeedback) this.tg.HapticFeedback.notificationOccurred('success');
-                if (this.tg.showAlert) this.tg.showAlert(`🎉 Դուք հաջողությամբ վերցրեցիք բոնուսը՝ +${bonus.toLocaleString()} 💰!`);
+                if (this.tg.showAlert) this.tg.showAlert(`🎉 Դուք հաջողությամբ ստացաք ձեր բոնուսը՝ +${bonus.toLocaleString()} 💰!`);
 
                 await this.forceSave();
                 this.loadReferralsData();
@@ -878,13 +878,13 @@
 
                 if (!refIdInput || isNaN(refIdInput)) {
                     msgEl.style.color = "var(--accent-red)";
-                    msgEl.innerText = "Մուտքագրեք ճիշտ ID!";
+                    msgEl.innerText = "Մուտքագրեք ճիշտ ID:";
                     return;
                 }
 
                 if (refIdInput === this.state.userId) {
                     msgEl.style.color = "var(--accent-red)";
-                    msgEl.innerText = "Չեք կարող մուտքագրել ձեր սեփական ID-ն!";
+                    msgEl.innerText = "Չեք կարող մուտքագրել ձեր սեփական ID-ն:";
                     return;
                 }
 
@@ -897,7 +897,7 @@
                     if (error) throw error;
                     if (!refUser) {
                         msgEl.style.color = "var(--accent-red)";
-                        msgEl.innerText = "Այդպիսի ID-ով օգտատեր չի գտնվել!";
+                        msgEl.innerText = "Այդպիսի ID-ով օգտատեր չի գտնվել:";
                         return;
                     }
 
@@ -912,7 +912,7 @@
                     this.addEarnings(5000);
 
                     if (this.tg.HapticFeedback) this.tg.HapticFeedback.notificationOccurred('success');
-                    if (this.tg.showAlert) this.tg.showAlert("✅ ID-ն հաջողությամբ ակտիվացված է: Ձեզ շնորհվեց +5,000 💰 բոնուս։");
+                    if (this.tg.showAlert) this.tg.showAlert("✅ ID-ն հաջողությամբ ակտիվացված է: Ձեզ շնորհվեց +5,000 💰 բոնուս:");
 
                     await this.forceSave();
                 } catch (e) {
@@ -924,7 +924,7 @@
 
             checkRouletteTimer() {
                 clearInterval(this.timerInterval);
-                const cooldown = 24 * 60 * 60 * 1000; // 24 часа
+                const cooldown = 24 * 60 * 60 * 1000; // 24 hours
                 
                 const update = () => {
                     const now = Date.now();
@@ -936,14 +936,14 @@
 
                     if (diff <= 0) {
                         spinBtn.disabled = false;
-                        timerEl.innerText = "Անիվը հասանելի է!";
+                        timerEl.innerText = "Անիվը հասանելի է պտտելու համար:";
                         clearInterval(this.timerInterval);
                     } else {
                         spinBtn.disabled = true;
                         const hours = Math.floor(diff / (1000 * 60 * 60));
                         const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
                         const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-                        timerEl.innerText = `Հաջորդ պտույտը` + ` ` + `${hours}ж ${minutes}р ${seconds}с` + ` հետո` ;
+                        timerEl.innerText = `Հաջորդ պտույտը՝ ${hours}ժ ${minutes}ր ${seconds}վ հետո`;
                     }
                 };
 
@@ -959,7 +959,7 @@
                 const resultEl = document.getElementById('rouletteResult');
                 
                 wheel.style.transform = `rotate(${Math.random() * 1080 + 1440}deg)`;
-                resultEl.innerText = "Պտտում ենք անիվը...";
+                resultEl.innerText = "Անիվը պտտվում է...";
 
                 setTimeout(async () => {
                     const prizes = [1000, 5000, 10000, 25000, 50000, 100000];
