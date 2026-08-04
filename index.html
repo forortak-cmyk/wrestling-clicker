@@ -39,6 +39,7 @@
             background: var(--bg-header);
             border-bottom: 1px solid var(--border-color);
             flex-shrink: 0;
+            z-index: 2;
         }
         .user-name { font-size: 13px; color: var(--text-muted); margin-bottom: 4px; }
         .balance-box { font-size: 32px; font-weight: 800; color: var(--accent-gold); }
@@ -61,11 +62,53 @@
         }
         .view.active { display: flex; }
 
-        /* Main Clicker */
-        #main-view { justify-content: center; }
+        /* Main Clicker with Background Details */
+        #main-view { 
+            justify-content: flex-start; 
+            padding-top: 25px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Decorative background elements */
+        .bg-decor-circle {
+            position: absolute;
+            width: 260px;
+            height: 260px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(10, 132, 255, 0.08) 0%, transparent 70%);
+            top: 15%;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .bg-decor-grid {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: radial-gradient(var(--border-color) 1px, transparent 1px);
+            background-size: 24px 24px;
+            opacity: 0.3;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .clicker-wrapper {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+
         .coin {
-            width: 210px;
-            height: 210px;
+            width: 200px;
+            height: 200px;
             background: radial-gradient(circle at 30% 30%, #ffe066, #e6a100 70%, #996b00);
             border-radius: 50%;
             display: flex;
@@ -220,41 +263,43 @@
         .voucher-card h3 { font-size: 16px; color: var(--accent-green); margin-bottom: 4px; }
         .voucher-code { font-family: monospace; font-size: 18px; color: var(--accent-gold); font-weight: bold; margin: 8px 0; letter-spacing: 1px; }
 
-        /* Roulette Styles */
+        /* Roulette Styles (Embedded on Main) */
         .roulette-container {
             width: 100%;
             max-width: 400px;
             background: var(--bg-header);
             border: 1px solid var(--border-color);
             border-radius: 16px;
-            padding: 20px;
+            padding: 15px;
             text-align: center;
-            margin-bottom: 15px;
+            position: relative;
+            z-index: 1;
+            margin-bottom: 20px;
         }
         .roulette-wheel {
-            width: 150px;
-            height: 150px;
-            margin: 0 auto 15px;
+            width: 90px;
+            height: 90px;
+            margin: 0 auto 10px;
             border-radius: 50%;
             background: radial-gradient(circle, #2c2c2e, #1c1c1e);
-            border: 4px solid var(--accent-gold);
+            border: 3px solid var(--accent-gold);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 32px;
+            font-size: 24px;
             transition: transform 3s cubic-bezier(0.15, 0.9, 0.2, 1);
         }
         .roulette-result {
-            font-size: 16px;
+            font-size: 14px;
             font-weight: bold;
             color: var(--accent-gold);
-            margin-bottom: 15px;
-            min-height: 24px;
+            margin-bottom: 10px;
+            min-height: 20px;
         }
         .timer-display {
-            font-size: 14px;
+            font-size: 12px;
             color: var(--text-muted);
-            margin-bottom: 10px;
+            margin-bottom: 8px;
         }
 
         /* Navigation */
@@ -266,6 +311,7 @@
             border-top: 1px solid var(--border-color);
             padding: 8px 4px 12px;
             flex-shrink: 0;
+            z-index: 2;
         }
         .nav-btn {
             background: none;
@@ -369,11 +415,24 @@
             </div>
         </div>
 
-        <!-- 3. Main (Clicker) -->
+        <!-- 3. Main (Clicker + Roulette) -->
         <div id="main-view" class="view active">
-            <div class="coin" id="coinBtn">
-                <span>ТАПАЙ</span>
-                <span class="coin-sub" id="powerLabel">+1 за тап</span>
+            <div class="bg-decor-grid"></div>
+            <div class="bg-decor-circle"></div>
+
+            <div class="clicker-wrapper">
+                <div class="coin" id="coinBtn">
+                    <span>ТАПАЙ</span>
+                    <span class="coin-sub" id="powerLabel">+1 за тап</span>
+                </div>
+            </div>
+
+            <div class="roulette-container">
+                <h3 style="font-size: 15px; margin-bottom: 8px;">🎰 Ежедневная рулетка</h3>
+                <div class="roulette-wheel" id="rouletteWheel">🎁</div>
+                <div class="roulette-result" id="rouletteResult">Испытай удачу!</div>
+                <div class="timer-display" id="rouletteTimer">Проверка доступности...</div>
+                <button class="action-btn success-btn" id="spinBtn" onclick="app.spinRoulette()" style="width: 100%; padding: 10px; font-size: 13px;" disabled>Крутить</button>
             </div>
         </div>
 
@@ -441,18 +500,7 @@
             </div>
         </div>
 
-        <!-- 5. Roulette View (Встроенная вкладка рулетки) -->
-        <div id="roulette-view" class="view">
-            <h2 style="font-size: 18px; margin-bottom: 15px;">🎰 Ежедневная рулетка</h2>
-            <div class="roulette-container">
-                <div class="roulette-wheel" id="rouletteWheel">🎁</div>
-                <div class="roulette-result" id="rouletteResult">Испытай удачу!</div>
-                <div class="timer-display" id="rouletteTimer">Проверка доступности...</div>
-                <button class="action-btn success-btn" id="spinBtn" onclick="app.spinRoulette()" style="width: 100%; padding: 12px; font-size: 14px;" disabled>Крутить</button>
-            </div>
-        </div>
-
-        <!-- 6. Profile View -->
+        <!-- 5. Profile View -->
         <div id="profile-view" class="view">
             <h2 style="font-size: 18px; margin-bottom: 15px; color: #fff;">👤 Статус аккаунта</h2>
             <div class="list-container">
@@ -481,9 +529,6 @@
         </button>
         <button class="nav-btn" onclick="app.switchView('business', this)">
             <span class="icon">💼</span><span>Бизнес</span>
-        </button>
-        <button class="nav-btn" onclick="app.switchView('roulette', this)">
-            <span class="icon">🎰</span><span>Рулетка</span>
         </button>
         <button class="nav-btn" onclick="app.switchView('profile', this)">
             <span class="icon">👤</span><span>Профиль</span>
@@ -529,7 +574,9 @@
 
                 try {
                     this.db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-                    this.loadUserData();
+                    this.loadUserData().then(() => {
+                        this.checkRouletteTimer();
+                    });
                 } catch (e) {
                     console.error("Supabase Error");
                 }
@@ -564,7 +611,7 @@
 
                 if (viewName === 'referrals') this.loadReferralsData();
                 if (viewName === 'profile') this.updateProfileUI();
-                if (viewName === 'roulette') this.checkRouletteTimer();
+                if (viewName === 'main') this.checkRouletteTimer();
 
                 if (this.tg.HapticFeedback) this.tg.HapticFeedback.selectionChanged();
             },
@@ -884,6 +931,8 @@
                     const diff = (this.state.lastSpinTime + cooldown) - now;
                     const spinBtn = document.getElementById('spinBtn');
                     const timerEl = document.getElementById('rouletteTimer');
+
+                    if (!spinBtn || !timerEl) return;
 
                     if (diff <= 0) {
                         spinBtn.disabled = false;
