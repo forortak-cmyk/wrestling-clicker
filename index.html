@@ -558,6 +558,7 @@
             saveTimeout: null,
             MAX_POWER: 500,
             timerInterval: null,
+            dataLoaded: false,
 
             init() {
                 this.tg.expand();
@@ -818,6 +819,8 @@
                     document.getElementById('manualRefBlock').style.display = 
                         this.state.myReferrerId ? 'none' : 'block';
 
+                    this.dataLoaded = true;
+
                 } catch (err) {
                     console.error("Բեռնման սխալ:", err);
                 }
@@ -911,6 +914,19 @@
             async claimManualRef() {
                 const inputEl = document.getElementById('manualRefInput');
                 const msgEl = document.getElementById('manualRefMsg');
+
+                if (!this.dataLoaded) {
+                    msgEl.style.color = "var(--accent-red)";
+                    msgEl.innerText = "Տվյալները դեռ բեռնվում են, փորձեք մի փոքր ուշ:";
+                    return;
+                }
+
+                if (this.state.myReferrerId) {
+                    msgEl.style.color = "var(--accent-red)";
+                    msgEl.innerText = "Դուք արդեն ունեք հրավիրող:";
+                    return;
+                }
+
                 const refIdInput = parseInt(inputEl.value.trim());
 
                 if (!refIdInput || isNaN(refIdInput)) {
@@ -998,20 +1014,18 @@
                 wheel.style.transform = `rotate(${Math.random() * 1080 + 1440}deg)`;
                 resultEl.innerText = "Անիվը պտտվում է...";
 
-                // Мгновенно сохраняем время в базу данных, чтобы при перезаходе попытка уже считалась использованной
+                // Приз определяем и сохраняем СРАЗУ вместе с временем — так игрок не потеряет
+                // выигрыш, даже если закроет приложение до окончания анимации
+                const prizes = [1000, 5000, 10000, 25000, 50000, 100000];
+                const prize = prizes[Math.floor(Math.random() * prizes.length)];
+
                 this.state.lastSpinTime = Date.now();
+                this.addEarnings(prize);
                 await this.forceSave();
 
-                setTimeout(async () => {
-                    const prizes = [1000, 5000, 10000, 25000, 50000, 100000];
-                    const prize = prizes[Math.floor(Math.random() * prizes.length)];
-
-                    this.addEarnings(prize);
-                    
+                setTimeout(() => {
                     resultEl.innerText = `🎉 Դուք շահեցիք ${prize.toLocaleString()} 💰!`;
                     if (this.tg.HapticFeedback) this.tg.HapticFeedback.notificationOccurred('success');
-
-                    await this.forceSave();
                     this.checkRouletteTimer();
                 }, 3000);
             }
