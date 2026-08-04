@@ -452,11 +452,11 @@
                     </div>
                 </div>
                 <div class="sponsor-card">
-                    <h3>🍦 Պաղպաղակի կιοσκ</h3>
+                    <h3>🍦 Պաղպաղակի կիոսկ</h3>
                     <p class="desc">Վաուչեր 2 գնդիկ անվճար տնական պաղպաղակի համար։</p>
                     <div class="sponsor-row">
                         <span class="sponsor-price">100,000 💰</span>
-                        <button class="action-btn" onclick="app.buyVoucher('Պաղպաղակի կιοσκ', '2 անվճար գնդիկ պաղպաղակ', 100000)">Ձեռք բերել</button>
+                        <button class="action-btn" onclick="app.buyVoucher('Պաղպաղակի կիոսկ', '2 անվճար գնդիկ պաղպաղակ', 100000)">Ձեռք բերել</button>
                     </div>
                 </div>
                 <div class="sponsor-card">
@@ -771,7 +771,7 @@
                         this.state.clickPower = user.click_power || 1;
                         this.state.refClaimed = user.ref_claimed || 0;
                         this.state.myReferrerId = user.referrer_id || null;
-                        this.state.lastSpinTime = user.last_spin || 0;
+                        this.state.lastSpinTime = Number(user.last_spin) || 0;
                     }
 
                     const { count } = await this.db.from('users')
@@ -961,12 +961,15 @@
                 wheel.style.transform = `rotate(${Math.random() * 1080 + 1440}deg)`;
                 resultEl.innerText = "Անիվը պտտվում է...";
 
+                // Мгновенно сохраняем время в базу данных, чтобы при перезаходе попытка уже считалась использованной
+                this.state.lastSpinTime = Date.now();
+                await this.forceSave();
+
                 setTimeout(async () => {
                     const prizes = [1000, 5000, 10000, 25000, 50000, 100000];
                     const prize = prizes[Math.floor(Math.random() * prizes.length)];
 
                     this.addEarnings(prize);
-                    this.state.lastSpinTime = Date.now();
                     
                     resultEl.innerText = `🎉 Դուք շահեցիք ${prize.toLocaleString()} 💰!`;
                     if (this.tg.HapticFeedback) this.tg.HapticFeedback.notificationOccurred('success');
