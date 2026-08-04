@@ -737,12 +737,44 @@
             },
 
             copyMyId() {
-                navigator.clipboard.writeText(this.state.userId.toString())
-                    .then(() => {
-                        if (this.tg.HapticFeedback) this.tg.HapticFeedback.selectionChanged();
-                        if (this.tg.showAlert) this.tg.showAlert("Ձեր ID-ն պատճենված է՝ " + this.state.userId);
-                        else alert("ID-ն պատճենված է:");
+                const idText = this.state.userId.toString();
+
+                const showSuccess = () => {
+                    if (this.tg.HapticFeedback) this.tg.HapticFeedback.selectionChanged();
+                    if (this.tg.showAlert) this.tg.showAlert("Ձեր ID-ն պատճենված է՝ " + idText);
+                    else alert("ID-ն պատճենված է:");
+                };
+
+                const showFailure = () => {
+                    if (this.tg.showAlert) this.tg.showAlert("Ձեր ID-ն՝ " + idText + " (չհաջողվեց ավտոմատ պատճենել)");
+                    else alert("Ձեր ID-ն՝ " + idText);
+                };
+
+                // Пытаемся современным способом (может быть недоступен внутри Telegram WebView)
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(idText).then(showSuccess).catch(() => {
+                        this.fallbackCopy(idText, showSuccess, showFailure);
                     });
+                } else {
+                    this.fallbackCopy(idText, showSuccess, showFailure);
+                }
+            },
+
+            fallbackCopy(text, onSuccess, onFailure) {
+                try {
+                    const tempInput = document.createElement('textarea');
+                    tempInput.value = text;
+                    tempInput.style.position = 'fixed';
+                    tempInput.style.opacity = '0';
+                    document.body.appendChild(tempInput);
+                    tempInput.focus();
+                    tempInput.select();
+                    const ok = document.execCommand('copy');
+                    document.body.removeChild(tempInput);
+                    if (ok) onSuccess(); else onFailure();
+                } catch (e) {
+                    onFailure();
+                }
             },
 
             async loadUserData() {
@@ -772,6 +804,7 @@
                         this.state.refClaimed = user.ref_claimed || 0;
                         this.state.myReferrerId = user.referrer_id || null;
                         this.state.lastSpinTime = Number(user.last_spin) || 0;
+                        this.state.vouchers = Array.isArray(user.vouchers) ? user.vouchers : [];
                     }
 
                     const { count } = await this.db.from('users')
@@ -798,7 +831,8 @@
                         total_earned: this.state.totalEarned,
                         click_power: this.state.clickPower,
                         ref_claimed: this.state.refClaimed,
-                        last_spin: this.state.lastSpinTime
+                        last_spin: this.state.lastSpinTime,
+                        vouchers: this.state.vouchers
                     };
 
                     await this.db.from('users')
@@ -826,7 +860,10 @@
                     this.state.refCount = refs.length;
                     document.getElementById('refCountVal').innerText = this.state.refCount;
 
-                    const totalBonusEarned = this.state.refCount * 10000;
+                    // Фиксированный бонус за каждого друга + 10% от их суммарного заработка
+                    const flatBonus = this.state.refCount * 10000;
+                    const percentBonus = refs.reduce((sum, r) => sum + Math.floor((r.total_earned || 0) * 0.1), 0);
+                    const totalBonusEarned = flatBonus + percentBonus;
                     this.state.availableRefBonus = Math.max(0, totalBonusEarned - this.state.refClaimed);
                     document.getElementById('refAvailableVal').innerText = `${this.state.availableRefBonus.toLocaleString()} 💰`;
 
