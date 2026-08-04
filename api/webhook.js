@@ -3,7 +3,7 @@ export default async function handler(req, res) {
     return res.status(200).send('Bot is running');
   }
 
-  const BOT_TOKEN = process.env.BOT_TOKEN;
+  const BOT_TOKEN = 8860138871:AAFyxkB-o2sCjJJeaC2ry5H-B30TFM4WyTI;
   const APP_URL = 'https://t.me/Wrestler_clicker_bot/app';
 
   const update = req.body;
