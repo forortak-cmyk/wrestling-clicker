@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Wrestling Clicker</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
             --bg-main: #151517;
@@ -536,12 +535,10 @@
     </div>
 
     <script>
-        const SUPABASE_URL = 'https://bgrvgzgqtryudztngkqm.supabase.co';
-        const SUPABASE_ANON_KEY = 'sb_publishable_bKa8iusANSHGJ3KEgS8nJg_3TxrJdmZ';
-        
+        const API_URL = '/api/game';
+
         const app = {
             tg: window.Telegram.WebApp,
-            db: null,
             state: {
                 userId: 999999,
                 userName: "Խաղացող",
@@ -555,7 +552,8 @@
                 vouchers: [],
                 lastSpinTime: 0
             },
-            saveTimeout: null,
+            pendingClicks: 0,
+            syncTimeout: null,
             MAX_POWER: 500,
             timerInterval: null,
             dataLoaded: false,
@@ -563,7 +561,7 @@
             init() {
                 this.tg.expand();
                 this.tg.ready();
-                
+
                 const tgUser = this.tg.initDataUnsafe?.user;
                 if (tgUser) {
                     this.state.userId = tgUser.id;
@@ -573,34 +571,77 @@
                 document.getElementById('username').innerText = this.state.userName;
                 document.getElementById('myIdDisplay').innerText = this.state.userId;
 
-                try {
-                    this.db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-                    this.loadUserData().then(() => {
-                        this.checkRouletteTimer();
-                    });
-                } catch (e) {
-                    console.error("Supabase Error");
-                }
+                this.loadUserData().then(() => {
+                    this.checkRouletteTimer();
+                });
 
                 this.setupEventListeners();
             },
 
+            // Все запросы к серверу подписываются данными Telegram — сервер сам
+            // проверяет подлинность и не доверяет тому, что говорит клиент
+            async callApi(action, payload) {
+                try {
+                    const res = await fetch(API_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ initData: this.tg.initData, action, payload })
+                    });
+                    return await res.json();
+                } catch (e) {
+                    console.error('API error:', e);
+                    return { ok: false, error: 'network' };
+                }
+            },
+
+            applyUserState(user) {
+                if (!user) return;
+                this.state.score = user.balance || 0;
+                this.state.totalEarned = user.total_earned || 0;
+                this.state.clickPower = user.click_power || 1;
+                this.state.refClaimed = user.ref_claimed || 0;
+                this.state.myReferrerId = user.referrer_id || null;
+                this.state.lastSpinTime = Number(user.last_spin) || 0;
+                this.state.vouchers = Array.isArray(user.vouchers) ? user.vouchers : [];
+                if (typeof user.refCount === 'number') this.state.refCount = user.refCount;
+
+                document.getElementById('score').innerText = this.state.score.toLocaleString();
+                this.updateShopUI();
+            },
+
             setupEventListeners() {
                 document.getElementById('coinBtn').addEventListener('click', () => {
-                    this.addEarnings(this.state.clickPower);
+                    // Локально сразу показываем клик — для отзывчивости.
+                    // Сервер потом сам всё пересчитает и подтвердит.
+                    this.state.score += this.state.clickPower;
+                    this.state.totalEarned += this.state.clickPower;
+                    document.getElementById('score').innerText = this.state.score.toLocaleString();
+
+                    this.pendingClicks += 1;
                     if (this.tg.HapticFeedback) this.tg.HapticFeedback.impactOccurred('light');
-                    this.saveDebounced();
+                    this.scheduleSync();
                 });
 
                 document.addEventListener('visibilitychange', () => {
-                    if (document.visibilityState === 'hidden') this.forceSave();
+                    if (document.visibilityState === 'hidden') this.forceSync();
                 });
             },
 
-            addEarnings(amount) {
-                this.state.score += amount;
-                this.state.totalEarned += amount;
-                document.getElementById('score').innerText = this.state.score.toLocaleString();
+            scheduleSync() {
+                clearTimeout(this.syncTimeout);
+                this.syncTimeout = setTimeout(() => this.forceSync(), 1500);
+            },
+
+            async forceSync() {
+                if (this.pendingClicks <= 0) return;
+                const clicks = this.pendingClicks;
+                this.pendingClicks = 0;
+
+                const result = await this.callApi('sync', { clicks });
+                if (result.ok) {
+                    // Подтверждаем реальным значением с сервера (на случай расхождений)
+                    this.applyUserState(result.user);
+                }
             },
 
             switchView(viewName, btnEl) {
@@ -651,23 +692,22 @@
                     return;
                 }
 
-                this.state.score -= cost;
-                document.getElementById('score').innerText = this.state.score.toLocaleString();
-                
-                const randomCode = "VCHR-" + Math.random().toString(36).substr(2, 6).toUpperCase();
-                const newVoucher = {
-                    sponsor: sponsorName,
-                    prize: prizeDesc,
-                    code: randomCode,
-                    date: new Date().toLocaleDateString('hy-AM')
-                };
+                // Сначала синхронизируем клики, чтобы сервер знал актуальный баланс
+                await this.forceSync();
 
-                this.state.vouchers.push(newVoucher);
+                const result = await this.callApi('buyVoucher', { sponsor: sponsorName, prize: prizeDesc, cost });
+
+                if (!result.ok) {
+                    if (this.tg.showAlert) this.tg.showAlert("❌ Մետաղադրամները բավարար չեն գնման համար:");
+                    else alert("Մետաղադրամները բավարար չեն:");
+                    if (result.user) this.applyUserState(result.user);
+                    return;
+                }
+
+                this.applyUserState(result.user);
 
                 if (this.tg.HapticFeedback) this.tg.HapticFeedback.notificationOccurred('success');
                 if (this.tg.showAlert) this.tg.showAlert(`✅ Դուք հաջողությամբ ձեռք բերեցիք վաուչեր "${sponsorName}" հովանավորից: Այն կարող եք գտնել «Վաուչերներ» բաժնում:`);
-                
-                await this.forceSave();
             },
 
             renderVouchers() {
@@ -687,7 +727,7 @@
                         <p style="font-size: 13px; color: #fff; margin-bottom: 5px;">${v.prize}</p>
                         <p style="font-size: 12px; color: #aaa;">Ձեր պրոմոկոդը՝</p>
                         <div class="voucher-code">${v.code}</div>
-                        <p style="font-size: 10px; color: var(--text-muted); margin-top: 5px;">Ձեռք բերման ամսաթիվը՝ ${v.date}</p>
+                        <p style="font-size: 10px; color: var(--text-muted); margin-top: 5px;">Ձեռք բերման ամսաթիվը՝ ${new Date(v.date).toLocaleDateString('hy-AM')}</p>
                     </div>
                 `).join('');
             },
@@ -714,27 +754,24 @@
                     costEl.innerText = `Գինը՝ ${cost.toLocaleString()} 💰`;
                     btnEl.innerText = "Գնել";
                     btnEl.disabled = false;
-                    btnEl.onclick = () => this.buyClickPower(powerAdd, cost);
+                    btnEl.onclick = () => this.buyClickPower(id);
                 }
             },
 
-            async buyClickPower(powerAdd, cost) {
-                if (this.state.clickPower + powerAdd > this.MAX_POWER) return;
+            async buyClickPower(itemId) {
+                await this.forceSync();
 
-                if (this.state.score < cost) {
+                const result = await this.callApi('buyUpgrade', { itemId });
+
+                if (!result.ok) {
                     if (this.tg.HapticFeedback) this.tg.HapticFeedback.notificationOccurred('error');
                     alert("Մետաղադրամները բավարար չեն:");
+                    if (result.user) this.applyUserState(result.user);
                     return;
                 }
 
-                this.state.score -= cost;
-                this.state.clickPower += powerAdd;
-                
-                document.getElementById('score').innerText = this.state.score.toLocaleString();
-                this.updateShopUI();
-                
+                this.applyUserState(result.user);
                 if (this.tg.HapticFeedback) this.tg.HapticFeedback.notificationOccurred('success');
-                await this.forceSave();
             },
 
             copyMyId() {
@@ -751,7 +788,6 @@
                     else alert("Ձեր ID-ն՝ " + idText);
                 };
 
-                // Пытаемся современным способом (может быть недоступен внутри Telegram WebView)
                 if (navigator.clipboard && navigator.clipboard.writeText) {
                     navigator.clipboard.writeText(idText).then(showSuccess).catch(() => {
                         this.fallbackCopy(idText, showSuccess, showFailure);
@@ -779,135 +815,67 @@
             },
 
             async loadUserData() {
-                if (!this.db) return;
-
-                try {
-                    let { data: user, error } = await this.db.from('users')
-                        .select('*').eq('telegram_id', this.state.userId).maybeSingle();
-
-                    if (error) throw error;
-
-                    if (!user) {
-                        await this.db.from('users').insert([{ 
-                            telegram_id: this.state.userId, 
-                            username: this.state.userName, 
-                            balance: 0, 
-                            total_earned: 0,
-                            click_power: 1,
-                            referrer_id: null,
-                            ref_claimed: 0,
-                            last_spin: 0
-                        }]);
-                    } else {
-                        this.state.score = user.balance || 0;
-                        this.state.totalEarned = user.total_earned || this.state.score;
-                        this.state.clickPower = user.click_power || 1;
-                        this.state.refClaimed = user.ref_claimed || 0;
-                        this.state.myReferrerId = user.referrer_id || null;
-                        this.state.lastSpinTime = Number(user.last_spin) || 0;
-                        this.state.vouchers = Array.isArray(user.vouchers) ? user.vouchers : [];
-                    }
-
-                    const { count } = await this.db.from('users')
-                        .select('*', { count: 'exact', head: true })
-                        .eq('referrer_id', this.state.userId);
-                    this.state.refCount = count || 0;
-
-                    document.getElementById('score').innerText = this.state.score.toLocaleString();
-                    this.updateShopUI();
-
-                    document.getElementById('manualRefBlock').style.display = 
-                        this.state.myReferrerId ? 'none' : 'block';
-
-                    this.dataLoaded = true;
-
-                } catch (err) {
-                    console.error("Բեռնման սխալ:", err);
+                const result = await this.callApi('load');
+                if (!result.ok) {
+                    console.error('Բեռնման սխալ');
+                    return;
                 }
-            },
 
-            async forceSave() {
-                if (!this.db) return;
-                try {
-                    const updateData = { 
-                        balance: this.state.score, 
-                        total_earned: this.state.totalEarned,
-                        click_power: this.state.clickPower,
-                        ref_claimed: this.state.refClaimed,
-                        last_spin: this.state.lastSpinTime,
-                        vouchers: this.state.vouchers
-                    };
+                this.applyUserState(result.user);
 
-                    await this.db.from('users')
-                        .update(updateData)
-                        .eq('telegram_id', this.state.userId);
-                } catch (e) {
-                    console.error("Պահպանման սխալ:", e);
-                }
-            },
+                document.getElementById('manualRefBlock').style.display =
+                    this.state.myReferrerId ? 'none' : 'block';
 
-            saveDebounced() {
-                clearTimeout(this.saveTimeout);
-                this.saveTimeout = setTimeout(() => this.forceSave(), 1500);
+                this.dataLoaded = true;
             },
 
             async loadReferralsData() {
-                if (!this.db) return;
-                try {
-                    let { data: refs, error } = await this.db.from('users')
-                        .select('username, total_earned, telegram_id')
-                        .eq('referrer_id', this.state.userId);
-
-                    if (error) throw error;
-
-                    this.state.refCount = refs.length;
-                    document.getElementById('refCountVal').innerText = this.state.refCount;
-
-                    // Фиксированный бонус за каждого друга + 10% от их суммарного заработка
-                    const flatBonus = this.state.refCount * 10000;
-                    const percentBonus = refs.reduce((sum, r) => sum + Math.floor((r.total_earned || 0) * 0.1), 0);
-                    const totalBonusEarned = flatBonus + percentBonus;
-                    this.state.availableRefBonus = Math.max(0, totalBonusEarned - this.state.refClaimed);
-                    document.getElementById('refAvailableVal').innerText = `${this.state.availableRefBonus.toLocaleString()} 💰`;
-
-                    const claimBtn = document.getElementById('claimRefBtn');
-                    claimBtn.disabled = this.state.availableRefBonus <= 0;
-
-                    const listEl = document.getElementById('refList');
-                    if (refs.length === 0) {
-                        listEl.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">Դուք դեռևս հրավիրվածներ չունեք:</p>';
-                        return;
-                    }
-
-                    listEl.innerHTML = refs.map(r => `
-                        <div class="card-item">
-                            <div class="card-info">
-                                <h3>👤 ${r.username || 'Խաղացող'}</h3>
-                                <p>ID: ${r.telegram_id}</p>
-                            </div>
-                            <div style="font-size: 13px; font-weight: bold; color: var(--accent-gold);">
-                                +${((r.total_earned || 0) * 0.1).toLocaleString()} 💰
-                            </div>
-                        </div>
-                    `).join('');
-                } catch (e) {
-                    console.error("Հղումների բեռնման սխալ:", e);
+                const result = await this.callApi('referralsList');
+                if (!result.ok) {
+                    console.error('Հղումների բեռնման սխալ');
+                    return;
                 }
+
+                this.state.refCount = result.refCount;
+                document.getElementById('refCountVal').innerText = this.state.refCount;
+
+                this.state.availableRefBonus = result.availableRefBonus;
+                document.getElementById('refAvailableVal').innerText = `${this.state.availableRefBonus.toLocaleString()} 💰`;
+
+                const claimBtn = document.getElementById('claimRefBtn');
+                claimBtn.disabled = this.state.availableRefBonus <= 0;
+
+                const listEl = document.getElementById('refList');
+                const refs = result.refs || [];
+                if (refs.length === 0) {
+                    listEl.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">Դուք դեռևս հրավիրվածներ չունեք:</p>';
+                    return;
+                }
+
+                listEl.innerHTML = refs.map(r => `
+                    <div class="card-item">
+                        <div class="card-info">
+                            <h3>👤 ${r.username || 'Խաղացող'}</h3>
+                            <p>ID: ${r.telegram_id}</p>
+                        </div>
+                        <div style="font-size: 13px; font-weight: bold; color: var(--accent-gold);">
+                            +${((r.total_earned || 0) * 0.1).toLocaleString()} 💰
+                        </div>
+                    </div>
+                `).join('');
             },
 
             async claimRefReward() {
-                if (this.state.availableRefBonus <= 0) return;
-                const bonus = this.state.availableRefBonus;
-                this.state.refClaimed += bonus;
-                this.addEarnings(bonus);
-                
+                const result = await this.callApi('claimReferral');
+                if (!result.ok) return;
+
+                this.applyUserState(result.user);
                 document.getElementById('refAvailableVal').innerText = "0 💰";
                 document.getElementById('claimRefBtn').disabled = true;
 
                 if (this.tg.HapticFeedback) this.tg.HapticFeedback.notificationOccurred('success');
-                if (this.tg.showAlert) this.tg.showAlert(`🎉 Դուք հաջողությամբ ստացաք ձեր բոնուսը՝ +${bonus.toLocaleString()} 💰!`);
+                if (this.tg.showAlert) this.tg.showAlert(`🎉 Դուք հաջողությամբ ստացաք ձեր բոնուսը՝ +${result.claimed.toLocaleString()} 💰!`);
 
-                await this.forceSave();
                 this.loadReferralsData();
             },
 
@@ -941,38 +909,21 @@
                     return;
                 }
 
-                try {
-                    let { data: refUser, error } = await this.db.from('users')
-                        .select('telegram_id')
-                        .eq('telegram_id', refIdInput)
-                        .maybeSingle();
+                const result = await this.callApi('setReferrer', { referrerId: refIdInput });
 
-                    if (error) throw error;
-                    if (!refUser) {
-                        msgEl.style.color = "var(--accent-red)";
-                        msgEl.innerText = "Այդպիսի ID-ով օգտատեր չի գտնվել:";
-                        return;
-                    }
-
-                    let { error: updateError } = await this.db.from('users')
-                        .update({ referrer_id: refIdInput })
-                        .eq('telegram_id', this.state.userId);
-
-                    if (updateError) throw updateError;
-
-                    this.state.myReferrerId = refIdInput;
-                    document.getElementById('manualRefBlock').style.display = 'none';
-                    this.addEarnings(5000);
-
-                    if (this.tg.HapticFeedback) this.tg.HapticFeedback.notificationOccurred('success');
-                    if (this.tg.showAlert) this.tg.showAlert("✅ ID-ն հաջողությամբ ակտիվացված է: Ձեզ շնորհվեց +5,000 💰 բոնուս:");
-
-                    await this.forceSave();
-                } catch (e) {
-                    console.error("Հղման ակտիվացման սխալ:", e);
+                if (!result.ok) {
                     msgEl.style.color = "var(--accent-red)";
-                    msgEl.innerText = "Սերվերի սխալ: Փորձեք փոքր-ինչ ուշ:";
+                    msgEl.innerText = result.error === 'Referrer not found'
+                        ? "Այդպիսի ID-ով օգտատեր չի գտնվել:"
+                        : "Սերվերի սխալ: Փորձեք փոքր-ինչ ուշ:";
+                    return;
                 }
+
+                this.applyUserState(result.user);
+                document.getElementById('manualRefBlock').style.display = 'none';
+
+                if (this.tg.HapticFeedback) this.tg.HapticFeedback.notificationOccurred('success');
+                if (this.tg.showAlert) this.tg.showAlert("✅ ID-ն հաջողությամբ ակտիվացված է: Ձեզ շնորհվեց +5,000 💰 բոնուս:");
             },
 
             checkRouletteTimer() {
@@ -1007,24 +958,26 @@
             async spinRoulette() {
                 const spinBtn = document.getElementById('spinBtn');
                 spinBtn.disabled = true;
-                
+
                 const wheel = document.getElementById('rouletteWheel');
                 const resultEl = document.getElementById('rouletteResult');
-                
+
                 wheel.style.transform = `rotate(${Math.random() * 1080 + 1440}deg)`;
                 resultEl.innerText = "Անիվը պտտվում է...";
 
-                // Приз определяем и сохраняем СРАЗУ вместе с временем — так игрок не потеряет
-                // выигрыш, даже если закроет приложение до окончания анимации
-                const prizes = [1000, 5000, 10000, 25000, 50000, 100000];
-                const prize = prizes[Math.floor(Math.random() * prizes.length)];
-
-                this.state.lastSpinTime = Date.now();
-                this.addEarnings(prize);
-                await this.forceSave();
+                // Приз выбирает сервер — клиент только показывает анимацию
+                const result = await this.callApi('spin');
 
                 setTimeout(() => {
-                    resultEl.innerText = `🎉 Դուք շահեցիք ${prize.toLocaleString()} 💰!`;
+                    if (!result.ok) {
+                        resultEl.innerText = "Անիվը դեռ հասանելի չէ:";
+                        if (result.user) this.applyUserState(result.user);
+                        this.checkRouletteTimer();
+                        return;
+                    }
+
+                    this.applyUserState(result.user);
+                    resultEl.innerText = `🎉 Դուք շահեցիք ${result.prize.toLocaleString()} 💰!`;
                     if (this.tg.HapticFeedback) this.tg.HapticFeedback.notificationOccurred('success');
                     this.checkRouletteTimer();
                 }, 3000);
