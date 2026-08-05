@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wrestling Clicker — Поддержка</title>
+<style>
+  :root {
+    --bg-main: #151517;
+    --bg-header: #1c1c1e;
+    --border-color: #2c2c2e;
+    --text-main: #ffffff;
+    --text-muted: #8e8e93;
+    --accent-gold: #ffd700;
+    --accent-blue: #0a84ff;
+  }
+  * { box-sizing: border-box; margin:0; padding:0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  body { background: var(--bg-main); color: var(--text-main); line-height: 1.5; }
+  .wrap { max-width: 640px; margin: 0 auto; padding: 24px 18px 60px; }
+  header { text-align: center; margin-bottom: 32px; }
+  header h1 { font-size: 22px; margin-bottom: 6px; }
+  header p { color: var(--text-muted); font-size: 13px; }
+
+  nav { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-bottom: 32px; }
+  nav a {
+    background: var(--bg-header);
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
+    text-decoration: none;
+    padding: 8px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+  }
+
+  section { margin-bottom: 36px; }
+  section h2 { font-size: 18px; margin-bottom: 14px; color: var(--accent-gold); }
+
+  .faq-item, .rule-item {
+    background: var(--bg-header);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+  }
+  .faq-item h3, .rule-item h3 { font-size: 14px; margin-bottom: 6px; }
+  .faq-item p, .rule-item p { font-size: 13px; color: #ccc; }
+
+  .sponsor-list { display: flex; flex-direction: column; gap: 8px; }
+  .sponsor-list .item {
+    background: var(--bg-header);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 13px;
+    display: flex;
+    justify-content: space-between;
+  }
+  .sponsor-list .item span.cost { color: var(--accent-gold); font-weight: bold; }
+
+  .contact-box {
+    background: linear-gradient(135deg, var(--bg-header) 0%, var(--border-color) 100%);
+    border: 1px solid #3a3a3c;
+    border-radius: 16px;
+    padding: 20px;
+    text-align: center;
+  }
+  .contact-box a {
+    color: var(--accent-blue);
+    text-decoration: none;
+    font-weight: bold;
+    font-size: 15px;
+  }
+
+  footer { text-align: center; color: var(--text-muted); font-size: 11px; margin-top: 40px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>🏆 Wrestling Clicker</h1>
+    <p>Поддержка, правила и часто задаваемые вопросы</p>
+  </header>
+
+  <nav>
+    <a href="#faq">FAQ</a>
+    <a href="#rules">Правила</a>
+    <a href="#sponsors">Партнёры</a>
+    <a href="#contact">Поддержка</a>
+  </nav>
+
+  <section id="faq">
+    <h2>❓ Часто задаваемые вопросы</h2>
+
+    <div class="faq-item">
+      <h3>В чём суть игры?</h3>
+      <p>Нажимай на монету, чтобы зарабатывать 💰. За заработанные монеты можно улучшать силу клика в магазине, приглашать друзей за бонусы, крутить бесплатное колесо раз в сутки — и обменивать монеты на реальные призы у партнёров проекта.</p>
+    </div>
+
+    <div class="faq-item">
+      <h3>Как получить приз (ваучер)?</h3>
+      <p>Накопи нужное количество монет и купи ваучер понравившегося партнёра в разделе «Бизнес». В разделе «Ваучеры» появится уникальный код — покажи его сотруднику партнёра при посещении, чтобы получить свой приз.</p>
+    </div>
+
+    <div class="faq-item">
+      <h3>Сколько действует ваучер?</h3>
+      <p>Срок действия и условия использования каждого ваучера определяет сам партнёр. Уточняй актуальные условия непосредственно у партнёра при посещении, либо пиши в поддержку, если условия не указаны прямо.</p>
+    </div>
+
+    <div class="faq-item">
+      <h3>Можно ли обменять монеты на деньги?</h3>
+      <p>Нет. Внутриигровые монеты не являются деньгами, не продаются, не покупаются и не обмениваются на наличные ни при каких условиях — только на предложения партнёров внутри приложения.</p>
+    </div>
+
+    <div class="faq-item">
+      <h3>Как работают приглашения друзей?</h3>
+      <p>За каждого приглашённого друга ты получаешь фиксированный бонус, а также процент от его дальнейшего заработка в игре — бонус можно забирать в разделе «Друзья» по мере накопления.</p>
+    </div>
+
+    <div class="faq-item">
+      <h3>Что делать, если приложение зависло или показывает ошибку?</h3>
+      <p>Попробуй закрыть и снова открыть приложение через кнопку в боте. Если не помогло — напиши в поддержку, укажи, что именно произошло.</p>
+    </div>
+  </section>
+
+  <section id="rules">
+    <h2>📜 Правила использования</h2>
+
+    <div class="rule-item">
+      <h3>1. Общие положения</h3>
+      <p>Wrestling Clicker — развлекательное мини-приложение внутри Telegram. Используя приложение, ты соглашаешься с изложенными ниже правилами. Администрация вправе изменять правила, список партнёров, призы и их стоимость в любое время без предварительного уведомления.</p>
+    </div>
+
+    <div class="rule-item">
+      <h3>2. Внутриигровая валюта</h3>
+      <p>Монеты 💰 существуют только внутри приложения, не имеют денежного эквивалента и не могут быть проданы, куплены, переданы за пределами игры или обменяны на реальные деньги.</p>
+    </div>
+
+    <div class="rule-item">
+      <h3>3. Призы и партнёры</h3>
+      <p>Призы (ваучеры) предоставляются независимыми партнёрами на условиях, определяемых самими партнёрами. Администрация приложения не несёт ответственности за качество товаров и услуг партнёров, а также за изменение или прекращение их предложений. Список партнёров и стоимость призов могут меняться.</p>
+    </div>
+
+    <div class="rule-item">
+      <h3>4. Честная игра</h3>
+      <p>Запрещены попытки обмана системы: взлом, вмешательство в код приложения, использование багов для получения нечестного преимущества. При выявлении подобных действий администрация вправе аннулировать баланс, ваучеры и заблокировать доступ к приложению без компенсации.</p>
+    </div>
+
+    <div class="rule-item">
+      <h3>5. Возрастные ограничения</h3>
+      <p>Приложением рекомендуется пользоваться лицам старше 16 лет. Лица младше этого возраста должны получить согласие родителей или законных представителей перед использованием приложения и получением призов у партнёров.</p>
+    </div>
+
+    <div class="rule-item">
+      <h3>6. Данные пользователя</h3>
+      <p>Для работы приложения сохраняются: Telegram ID, имя пользователя и игровые показатели (баланс, прогресс, купленные ваучеры). Эти данные используются исключительно для работы игры и не передаются третьим лицам, за исключением случаев, необходимых для выдачи приза у партнёра (демонстрация кода ваучера).</p>
+    </div>
+
+    <div class="rule-item">
+      <h3>7. Доступность сервиса</h3>
+      <p>Администрация не гарантирует бесперебойную работу приложения и вправе временно или окончательно приостановить его работу, в том числе без предварительного уведомления.</p>
+    </div>
+
+    <div class="rule-item">
+      <h3>8. Ограничение ответственности</h3>
+      <p>Приложение предоставляется «как есть». Администрация не несёт ответственности за любые убытки, возникшие в результате использования приложения, недоступности призов у партнёров или технических сбоев.</p>
+    </div>
+  </section>
+
+  <section id="sponsors">
+    <h2>🤝 Наши партнёры</h2>
+    <div class="sponsor-list">
+      <div class="item"><span>☕ Սրճարան «Առավոտ»</span><span class="cost">50,000 💰</span></div>
+      <div class="item"><span>🍦 Պաղպաղակի կիոսկ</span><span class="cost">100,000 💰</span></div>
+      <div class="item"><span>✂️ Վարսավիրանոց «Ուսաչ»</span><span class="cost">200,000 💰</span></div>
+      <div class="item"><span>🍕 Պիցցերիա «Մամա Միա»</span><span class="cost">300,000 💰</span></div>
+      <div class="item"><span>💪 Ֆիտնես ակումբ «Տիտան»</span><span class="cost">500,000 💰</span></div>
+      <div class="item"><span>👟 Մարզակոշիկների խանութ</span><span class="cost">1,000,000 💰</span></div>
+    </div>
+  </section>
+
+  <section id="contact">
+    <h2>✉️ Поддержка</h2>
+    <div class="contact-box">
+      <p style="color:#ccc; margin-bottom:10px; font-size:13px;">Есть вопрос, проблема с ваучером или предложение сотрудничества?</p>
+      <a href="mailto:wrestlingclicker@gmail.com">wrestlingclicker@gmail.com</a>
+    </div>
+  </section>
+
+  <footer>
+    Wrestling Clicker · Развлекательное приложение внутри Telegram
+  </footer>
+
+</div>
+</body>
+</html>
