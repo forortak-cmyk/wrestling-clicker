@@ -4,7 +4,9 @@ module.exports = async function handler(req, res) {
   }
 
   const BOT_TOKEN = process.env.BOT_TOKEN;
+  const ADMIN_ID = process.env.ADMIN_TELEGRAM_ID;
   const APP_URL = 'https://t.me/Wrestler_clicker_bot/app';
+  const ADMIN_APP_URL = 'https://wrestling-clicker.vercel.app/admin.html';
 
   const update = req.body;
   const message = update.message;
@@ -25,6 +27,28 @@ module.exports = async function handler(req, res) {
         }
       })
     });
+  }
+
+  if (message && message.text === '/admin') {
+    const chatId = message.chat.id;
+    const senderId = message.from && message.from.id;
+
+    // Отвечаем только владельцу бота — все остальные не получат никакого ответа
+    if (ADMIN_ID && String(senderId) === String(ADMIN_ID)) {
+      await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text: '🔐 Админ-панель',
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: '📊 Открыть статистику', web_app: { url: ADMIN_APP_URL } }]
+            ]
+          }
+        })
+      });
+    }
   }
 
   res.status(200).send('OK');
