@@ -435,66 +435,84 @@
             </div>
         </div>
 
-        <!-- 4. Business View (Спонсоры и Ваучеры) -->
+        <!-- 4. Business View (Мрцанакներ և Վաուչерներ) -->
         <div id="business-view" class="view">
             <div class="business-nav">
-                <button class="business-nav-btn active" id="tab-sponsors" onclick="app.switchBusinessTab('sponsors')">Հովանավորներ</button>
-                <button class="business-nav-btn" id="tab-vouchers" onclick="app.switchBusinessTab('vouchers')">Վաուչերներ</button>
+                <button class="business-nav-btn active" id="tab-sponsors" onclick="app.switchBusinessTab('sponsors')">🎁 Մրցանակներ</button>
+                <button class="business-nav-btn" id="tab-vouchers" onclick="app.switchBusinessTab('vouchers')">🎟 Իմ մրցանակները</button>
             </div>
             <div id="sponsors-container" style="width: 100%; display: flex; flex-direction: column; align-items: center; padding-bottom: 20px;">
+
+                <!-- Баннер "Скоро спонсоры" -->
+                <div style="width:100%; max-width:400px; background: linear-gradient(135deg, #1c1c1e, #2c2c2e); border: 1px solid #3a3a3c; border-radius: 16px; padding: 14px 16px; margin-bottom: 15px; text-align:center;">
+                    <p style="font-size:12px; color:#8e8e93;">🔜 Շուտով ավելանալու են գործընկեր հաստատությունների իրական մրցանակներ</p>
+                </div>
+
+                <!-- Статус Основатель -->
                 <div class="sponsor-card">
-                    <h3>☕ Սրճարան «Առավոտ»</h3>
-                    <p class="desc">50% զեղչ ցանկացած աղանդերի համար՝ սուրճ գնելիս։</p>
+                    <h3>🏅 «Հիմնադիր» կարգավիճակ</h3>
+                    <p class="desc">Դուք կդառնաք խաղի առաջին մասնակիցներից մեկը։ Հիմնադիր կարգավիճակը կտեսանելի լինի Ձեր պրոֆիլում հավերժ, անկախ հետագա փոփոխություններից։</p>
+                    <div class="sponsor-row">
+                        <span class="sponsor-price">10,000 💰</span>
+                        <button class="action-btn" onclick="app.buyVoucher('🏅 Հիմնադիր կարգավիճակ', 'Դուք հիմնադիրներից եք — կարգավիճակը ձեր պրոֆիլում հավերժ', 10000)">Ձեռք բերել</button>
+                    </div>
+                </div>
+
+                <!-- Упоминание в Instagram -->
+                <div class="sponsor-card">
+                    <h3>📢 Instagram-ում հիշատակում</h3>
+                    <p class="desc">Ձեր անունը/նիկը կտեղադրվի Wrestling Clicker-ի Instagram-ի պատմության/փոստի մեջ՝ որպես ակտիվ խաղացող։ Ուղարկեք Ձեր Instagram-ի նիկը wrestlingclicker@gmail.com հասցեին։</p>
                     <div class="sponsor-row">
                         <span class="sponsor-price">50,000 💰</span>
-                        <button class="action-btn" onclick="app.buyVoucher('Սրճարան «Առավոտ»', '50% զեղչ աղանդերի համար', 50000)">Ձեռք բերել</button>
+                        <button class="action-btn" onclick="app.buyVoucher('📢 Instagram-ում հիշատակում', 'Ձեր նիկը կտեղադրվի մեր Instagram-ում — ուղարկեք նիկը wrestlingclicker@gmail.com', 50000)">Ձեռք բերել</button>
                     </div>
                 </div>
+
+                <!-- Пополнение телефона -->
                 <div class="sponsor-card">
-                    <h3>🍦 Պաղպաղակի կիոսկ</h3>
-                    <p class="desc">Վաուչեր 2 գնդիկ անվճար տնական պաղպաղակի համար։</p>
+                    <h3>📱 Հեռախոսի հաշվի համալրում</h3>
+                    <p class="desc">1,000 դրամ՝ Ձեր հեռախոսի հաշվի վրա։ Վաուչեր ստանալուց հետո ուղարկեք Ձեր հեռախոսի համարը wrestlingclicker@gmail.com հասցեին, կատարում ենք 24 ժամվա ընթացքում։</p>
                     <div class="sponsor-row">
                         <span class="sponsor-price">100,000 💰</span>
-                        <button class="action-btn" onclick="app.buyVoucher('Պաղպաղակի կիոսկ', '2 անվճար գնդիկ պաղպաղակ', 100000)">Ձեռք բերել</button>
+                        <button class="action-btn" onclick="app.buyVoucher('📱 Հեռախոսի հաշվի համալրում 1,000 դրամ', 'Ուղարկեք Ձեր հեռախոսի համարը wrestlingclicker@gmail.com — կատարում ենք 24ժ-ի ընթացքում', 100000)">Ձեռք բերել</button>
                     </div>
                 </div>
+
+                <!-- Telegram Premium -->
                 <div class="sponsor-card">
-                    <h3>✂️ Վարսավիրանոց «Ուսաչ»</h3>
-                    <p class="desc">30% զեղչ տղամարդկանց ցանկացած սանրվածքի կամ մորուքի ձևավորման համար։</p>
+                    <h3>💎 Telegram Premium 1 ամիս</h3>
+                    <p class="desc">Telegram Premium բաժանորդագրություն 1 ամսով։ Վաուչեր ստանալուց հետո ուղարկեք Ձեր Telegram ID-ն wrestlingclicker@gmail.com հասցեին, ակտիվացնում ենք 24 ժամվա ընթացքում։</p>
                     <div class="sponsor-row">
                         <span class="sponsor-price">200,000 💰</span>
-                        <button class="action-btn" onclick="app.buyVoucher('Վարսավիրանոց «Ուսաչ»', '30% զեղչ սանրվածքի վրա', 200000)">Ձեռք բերել</button>
+                        <button class="action-btn" onclick="app.buyVoucher('💎 Telegram Premium 1 ամիս', 'Ուղարկեք Ձեր Telegram ID-ն wrestlingclicker@gmail.com — ակտիվացնում ենք 24ժ-ի ընթացքում', 200000)">Ձեռք բերել</button>
                     </div>
                 </div>
+
+                <!-- Пополнение телефона 3000 -->
                 <div class="sponsor-card">
-                    <h3>🍕 Պիցցերիա «Մամա Միա»</h3>
-                    <p class="desc">Մեկ միջին չափի «Մարգարիտա» պիցցա՝ լիովին անվճար։</p>
-                    <div class="sponsor-row">
-                        <span class="sponsor-price">300,000 💰</span>
-                        <button class="action-btn" onclick="app.buyVoucher('Պիցցերիա «Մամա Միա»', 'Անվճար Մարգարիտա պիցցա', 300000)">Ձեռք բերել</button>
-                    </div>
-                </div>
-                <div class="sponsor-card">
-                    <h3>💪 Ֆիտնես ակումբ «Տիտան»</h3>
-                    <p class="desc">Մեկանգամյա անվճար այցելություն մարզասրահ՝ մասնագետ մարզչի ուղեկցությամբ։</p>
+                    <h3>📱 Հեռախոսի հաշվի համալրում (մեծ)</h3>
+                    <p class="desc">3,000 դրամ՝ Ձեր հեռախոսի հաշվի վրա։ Վաուչեր ստանալուց հետո ուղարկեք Ձեր հեռախոսի համարը wrestlingclicker@gmail.com հասցեին, կատարում ենք 24 ժամվա ընթացքում։</p>
                     <div class="sponsor-row">
                         <span class="sponsor-price">500,000 💰</span>
-                        <button class="action-btn" onclick="app.buyVoucher('Ֆիտնես ակումբ «Տիտան»', 'Մեկանգամյա այցելություն մարզչի հետ', 500000)">Ձեռք բերել</button>
+                        <button class="action-btn" onclick="app.buyVoucher('📱 Հեռախոսի հաշվի համալրում 3,000 դրամ', 'Ուղարկեք Ձեր հեռախոսի համարը wrestlingclicker@gmail.com — կատարում ենք 24ժ-ի ընթացքում', 500000)">Ձեռք բերել</button>
                     </div>
                 </div>
+
+                <!-- Telegram Premium 3 месяца -->
                 <div class="sponsor-card">
-                    <h3>👟 Մարզակոշիկների խանութ</h3>
-                    <p class="desc">Նվեր-կտրոն 1000 ռուբլի զեղչով՝ ցանկացած զույգ կոշիկ գնելիս։</p>
+                    <h3>💎 Telegram Premium 3 ամիս</h3>
+                    <p class="desc">Telegram Premium բաժանորդագրություն 3 ամսով — լավագույն ընտրությունն ակտիվ օգտատերերի համար։ Վաուչեր ստանալուց հետո ուղարկեք Ձեր Telegram ID-ն wrestlingclicker@gmail.com հասցեին, ակտիվացնում ենք 24 ժամվա ընթացքում։</p>
                     <div class="sponsor-row">
                         <span class="sponsor-price">1,000,000 💰</span>
-                        <button class="action-btn" onclick="app.buyVoucher('Մարզակոշիկների խանութ', 'Կտրոն 1000 ռուբլի զեղչով', 1000000)">Ձեռք բերել</button>
+                        <button class="action-btn" onclick="app.buyVoucher('💎 Telegram Premium 3 ամիս', 'Ուղարկեք Ձեր Telegram ID-ն wrestlingclicker@gmail.com — ակտիվացնում ենք 24ժ-ի ընթացքում', 1000000)">Ձեռք բերել</button>
                     </div>
                 </div>
+
             </div>
             <div id="vouchers-container" style="width: 100%; display: none; flex-direction: column; align-items: center;">
                 <div id="my-vouchers-list" style="width: 100%; display: flex; flex-direction: column; align-items: center;"></div>
                 <p id="no-vouchers-msg" style="color: var(--text-muted); font-size: 14px; margin-top: 20px; text-align: center;">
-                    Դուք դեռևս չունեք գնված վաուչերներ:<br>Անցե՛ք «Հովանավորներ» բաժին:
+                    Դուք դեռևս չունեք ձեռք բերված մրցանակներ:<br>Անցե՛ք «Մրցանակներ» բաժին:
                 </p>
             </div>
         </div>
@@ -511,6 +529,9 @@
                 <div class="card-item"><div class="card-info"><h3>Հրավիրող (ID)</h3><p id="profileReferrer">Բացակայում է</p></div></div>
                 <div class="card-item"><div class="card-info"><h3>Հրավիրվածների քանակը</h3><p id="profileRefCount">0</p></div></div>
             </div>
+            <button class="action-btn" style="width: 100%; max-width: 400px; padding: 12px; margin-top: 5px;" onclick="app.openSupport()">
+                📜 Կանոններ և աջակցություն
+            </button>
         </div>
 
     </div>
