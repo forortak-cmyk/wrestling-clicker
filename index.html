@@ -947,6 +947,12 @@
                 if (this.tg.showAlert) this.tg.showAlert("✅ ID-ն հաջողությամբ ակտիվացված է: Ձեզ շնորհվեց +5,000 💰 բոնուս:");
             },
 
+            openSupport() {
+                const url = 'https://wrestling-clicker.vercel.app/support.html';
+                if (this.tg.openLink) this.tg.openLink(url);
+                else window.open(url, '_blank');
+            },
+
             checkRouletteTimer() {
                 clearInterval(this.timerInterval);
                 const cooldown = 24 * 60 * 60 * 1000; // 24 hours
