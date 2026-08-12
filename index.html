@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Wrestling Clicker</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://sad.adsgram.ai/js/sad.min.js"></script>
     <style>
         :root {
             --bg-main: #151517;
@@ -558,6 +559,21 @@
     <script>
         const API_URL = '/api/game';
 
+        // ID рекламного блока AdsGram (Interstitial) — из partner.adsgram.ai
+        const ADSGRAM_BLOCK_ID = 'int-42559';
+
+        // Показывает полноэкранную рекламу в естественной паузе игры.
+        // Если рекламы нет или произошла ошибка — просто ничего не делаем,
+        // игрок продолжает как обычно.
+        async function showInterstitialAd() {
+            if (!window.Adsgram) return;
+            try {
+                await window.Adsgram.init({ blockId: ADSGRAM_BLOCK_ID }).show();
+            } catch (e) {
+                // реклама не показана — ок, не мешаем игроку
+            }
+        }
+
         const app = {
             tg: window.Telegram.WebApp,
             state: {
@@ -793,6 +809,9 @@
 
                 this.applyUserState(result.user);
                 if (this.tg.HapticFeedback) this.tg.HapticFeedback.notificationOccurred('success');
+
+                // Естественная пауза после апгрейда — хороший момент для рекламы
+                showInterstitialAd();
             },
 
             copyMyId() {
@@ -1007,6 +1026,9 @@
                     resultEl.innerText = `🎉 Դուք շահեցիք ${result.prize.toLocaleString()} 💰!`;
                     if (this.tg.HapticFeedback) this.tg.HapticFeedback.notificationOccurred('success');
                     this.checkRouletteTimer();
+
+                    // Естественная пауза после колеса — раз в сутки, не раздражает
+                    showInterstitialAd();
                 }, 3000);
             }
         };
