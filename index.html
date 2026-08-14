@@ -67,7 +67,8 @@
             justify-content: flex-start; 
             padding-top: 25px;
             position: relative;
-            overflow: hidden;
+            overflow-x: hidden;
+            overflow-y: auto;
         }
 
         /* Decorative background elements */
@@ -436,7 +437,7 @@
             </div>
         </div>
 
-        <!-- 4. Business View (Мрцанакներ և Վաուչерներ) -->
+        <!-- 4. Business View (Мрцанակներ և Վաուչерներ) -->
         <div id="business-view" class="view">
             <div class="business-nav">
                 <button class="business-nav-btn active" id="tab-sponsors" onclick="app.switchBusinessTab('sponsors')">🎁 Մրցանակներ</button>
@@ -590,6 +591,8 @@
                 lastSpinTime: 0
             },
             pendingClicks: 0,
+            clicksSinceLastAd: 0,
+            CLICKS_PER_AD: 300,
             syncTimeout: null,
             MAX_POWER: 500,
             timerInterval: null,
@@ -657,6 +660,13 @@
                     this.pendingClicks += 1;
                     if (this.tg.HapticFeedback) this.tg.HapticFeedback.impactOccurred('light');
                     this.scheduleSync();
+
+                    // Показываем рекламу каждые 300 кликов
+                    this.clicksSinceLastAd += 1;
+                    if (this.clicksSinceLastAd >= this.CLICKS_PER_AD) {
+                        this.clicksSinceLastAd = 0;
+                        showInterstitialAd();
+                    }
                 });
 
                 document.addEventListener('visibilitychange', () => {
