@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Wrestling Clicker</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="https://richinfo.co/richpartners/telegram/js/tg-ob.js"></script>
+    <script src="https://sad.adsgram.ai/js/sad.min.js"></script>
     <style>
         :root {
             --bg-main: #151517;
@@ -437,7 +437,7 @@
             </div>
         </div>
 
-        <!-- 4. Business View (Мрцանակներ և Վաուչерներ) -->
+        <!-- 4. Business View (Мрцанակներ և Վաուչерներ) -->
         <div id="business-view" class="view">
             <div class="business-nav">
                 <button class="business-nav-btn active" id="tab-sponsors" onclick="app.switchBusinessTab('sponsors')">🎁 Մրցանակներ</button>
@@ -560,23 +560,18 @@
     <script>
         const API_URL = '/api/game';
 
-        // Реклама RichAds — контроллер инициализируем сразу при загрузке скрипта
-        const richadsController = new window.TelegramAdsController();
-        richadsController.initialize({
-            pubId: "1020233",
-            appId: "8519"
-        });
+        // ID рекламного блока AdsGram (Interstitial) — из partner.adsgram.ai
+        const ADSGRAM_BLOCK_ID = 'int-42559';
 
-        // Показывает полноэкранное видео-объявление в естественной паузе игры.
+        // Показывает полноэкранную рекламу в естественной паузе игры.
         // Если рекламы нет или произошла ошибка — просто ничего не делаем,
         // игрок продолжает как обычно.
         async function showInterstitialAd() {
+            if (!window.Adsgram) return;
             try {
-                const result = await richadsController.triggerInterstitialVideo();
-                console.log('RichAds ad result:', result);
+                await window.Adsgram.init({ blockId: ADSGRAM_BLOCK_ID }).show();
             } catch (e) {
                 // реклама не показана — ок, не мешаем игроку
-                console.log('RichAds ad skipped:', e);
             }
         }
 
@@ -666,7 +661,7 @@
                     if (this.tg.HapticFeedback) this.tg.HapticFeedback.impactOccurred('light');
                     this.scheduleSync();
 
-                    // Показываем рекламу каждые 100 кликов
+                    // Показываем рекламу каждые 300 кликов
                     this.clicksSinceLastAd += 1;
                     if (this.clicksSinceLastAd >= this.CLICKS_PER_AD) {
                         this.clicksSinceLastAd = 0;
