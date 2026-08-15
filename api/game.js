@@ -143,14 +143,16 @@ module.exports = async function handler(req, res) {
 
         const clickPower = user.click_power || 1;
         const regenEnergy = calculateRegeneratedEnergy(user.energy, user.last_energy_update, now);
-        const maxClicksByEnergy = Math.floor(regenEnergy / clickPower);
+        // Энергия тратится фиксированно — 1 за клик, независимо от силы клика.
+        // Сила клика влияет только на то, сколько монет приносит клик.
+        const maxClicksByEnergy = Math.floor(regenEnergy);
 
         const validClicks = Math.min(claimedClicks, maxPlausibleClicks, maxClicksByEnergy);
 
         const earned = validClicks * clickPower;
         const newBalance = (user.balance || 0) + earned;
         const newTotal = (user.total_earned || 0) + earned;
-        const newEnergy = Math.max(0, regenEnergy - validClicks * clickPower);
+        const newEnergy = Math.max(0, regenEnergy - validClicks);
 
         const { data: updated, error: upErr } = await db.from('users')
           .update({
