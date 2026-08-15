@@ -18,6 +18,20 @@ const SPIN_PRIZES = [1000, 5000, 10000, 25000, 50000, 100000];
 const MIN_CLICK_INTERVAL_MS = 150; // защита: реалистично не быстрее одного клика в 150мс
 const REFERRER_BONUS = 5000;
 
+const ENERGY_MAX = 500;
+const ENERGY_REGEN_PER_MS = 100 / (60 * 60 * 1000); // 100 энергии в час
+const AD_ENERGY_BONUS = 100;
+const AD_ENERGY_COOLDOWN_MS = 60 * 1000; // 1 минута между просмотрами рекламы за энергию —
+                                          // временная защита, пока не подключена серверная
+                                          // проверка реального просмотра рекламы через Adsgram
+
+// Считает, сколько энергии накопилось к моменту now, с учётом пассивного восстановления
+function calculateRegeneratedEnergy(storedEnergy, lastUpdateMs, nowMs) {
+  const elapsed = Math.max(0, nowMs - (Number(lastUpdateMs) || nowMs));
+  const regenerated = (Number(storedEnergy) || 0) + elapsed * ENERGY_REGEN_PER_MS;
+  return Math.min(ENERGY_MAX, regenerated);
+}
+
 // Проверяем, что запрос действительно пришёл из Telegram и не подделан
 function verifyTelegramInitData(initData, botToken) {
   if (!initData || !botToken) return null;
@@ -87,7 +101,10 @@ module.exports = async function handler(req, res) {
         ref_claimed: 0,
         last_spin: 0,
         vouchers: [],
-        last_sync: Date.now()
+        last_sync: Date.now(),
+        energy: ENERGY_MAX,
+        last_energy_update: Date.now(),
+        last_ad_energy_claim: 0
       }]).select().single();
       if (insertErr) throw insertErr;
       user = created;
@@ -98,25 +115,51 @@ module.exports = async function handler(req, res) {
         const { count } = await db.from('users')
           .select('*', { count: 'exact', head: true })
           .eq('referrer_id', telegramId);
-        return res.status(200).json({ ok: true, user: { ...user, refCount: count || 0 } });
+
+        // Досчитываем энергию за время, что игрока не было в приложении
+        const now = Date.now();
+        const regenEnergy = calculateRegeneratedEnergy(user.energy, user.last_energy_update, now);
+
+        let freshUser = user;
+        if (Math.round(regenEnergy) !== (user.energy || 0)) {
+          const { data: updated, error: upErr } = await db.from('users')
+            .update({ energy: regenEnergy, last_energy_update: now })
+            .eq('telegram_id', telegramId).select().single();
+          if (upErr) throw upErr;
+          freshUser = updated;
+        }
+
+        return res.status(200).json({ ok: true, user: { ...freshUser, refCount: count || 0 } });
       }
 
       case 'sync': {
         // Клиент присылает, сколько кликов сделал с прошлой синхронизации.
-        // Сервер сам решает, сколько из них реалистичны по времени.
+        // Сервер сам решает, сколько из них реалистичны по времени и по энергии.
         const now = Date.now();
         const lastSync = Number(user.last_sync) || now;
         const elapsedMs = Math.max(0, now - lastSync);
         const maxPlausibleClicks = Math.floor(elapsedMs / MIN_CLICK_INTERVAL_MS) + 5;
         const claimedClicks = Math.max(0, parseInt(payload && payload.clicks, 10) || 0);
-        const validClicks = Math.min(claimedClicks, maxPlausibleClicks);
 
-        const earned = validClicks * (user.click_power || 1);
+        const clickPower = user.click_power || 1;
+        const regenEnergy = calculateRegeneratedEnergy(user.energy, user.last_energy_update, now);
+        const maxClicksByEnergy = Math.floor(regenEnergy / clickPower);
+
+        const validClicks = Math.min(claimedClicks, maxPlausibleClicks, maxClicksByEnergy);
+
+        const earned = validClicks * clickPower;
         const newBalance = (user.balance || 0) + earned;
         const newTotal = (user.total_earned || 0) + earned;
+        const newEnergy = Math.max(0, regenEnergy - validClicks * clickPower);
 
         const { data: updated, error: upErr } = await db.from('users')
-          .update({ balance: newBalance, total_earned: newTotal, last_sync: now })
+          .update({
+            balance: newBalance,
+            total_earned: newTotal,
+            last_sync: now,
+            energy: newEnergy,
+            last_energy_update: now
+          })
           .eq('telegram_id', telegramId).select().single();
         if (upErr) throw upErr;
 
@@ -244,6 +287,31 @@ module.exports = async function handler(req, res) {
         if (upErr) throw upErr;
 
         return res.status(200).json({ ok: true, user: updated, prize });
+      }
+
+      case 'restoreEnergy': {
+        const now = Date.now();
+
+        // Временная защита от спама, пока не подключена реальная проверка
+        // просмотра рекламы через Adsgram reward callback на сервере
+        const lastClaim = Number(user.last_ad_energy_claim) || 0;
+        if (now - lastClaim < AD_ENERGY_COOLDOWN_MS) {
+          return res.status(400).json({ ok: false, error: 'Cooldown active', user });
+        }
+
+        const regenEnergy = calculateRegeneratedEnergy(user.energy, user.last_energy_update, now);
+        const newEnergy = Math.min(ENERGY_MAX, regenEnergy + AD_ENERGY_BONUS);
+
+        const { data: updated, error: upErr } = await db.from('users')
+          .update({
+            energy: newEnergy,
+            last_energy_update: now,
+            last_ad_energy_claim: now
+          })
+          .eq('telegram_id', telegramId).select().single();
+        if (upErr) throw upErr;
+
+        return res.status(200).json({ ok: true, user: updated });
       }
 
       default:
