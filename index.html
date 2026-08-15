@@ -691,10 +691,11 @@
 
             // Текущая энергия "на глаз": последнее известное серверу значение +
             // регенерация за прошедшее время − клики, которые ещё не отправлены на сервер
+            // (энергия тратится фиксированно, 1 за клик, независимо от силы клика)
             getDisplayEnergy() {
                 const elapsed = Math.max(0, Date.now() - this.state.energyUpdatedAt);
                 const regenerated = Math.min(this.MAX_ENERGY, this.state.energy + elapsed * this.ENERGY_REGEN_PER_MS);
-                const afterPending = regenerated - (this.pendingClicks * this.state.clickPower);
+                const afterPending = regenerated - this.pendingClicks;
                 return Math.max(0, Math.floor(afterPending));
             },
 
@@ -740,6 +741,13 @@
 
             setupEventListeners() {
                 document.getElementById('coinBtn').addEventListener('click', () => {
+                    // Проверяем энергию локально для мгновенной реакции —
+                    // сервер всё равно перепроверит и обрежет лишнее при синхронизации
+                    if (this.getDisplayEnergy() < 1) {
+                        if (this.tg.HapticFeedback) this.tg.HapticFeedback.notificationOccurred('error');
+                        return;
+                    }
+
                     // Локально сразу показываем клик — для отзывчивости.
                     // Сервер потом сам всё пересчитает и подтвердит.
                     this.state.score += this.state.clickPower;
@@ -749,8 +757,9 @@
                     this.pendingClicks += 1;
                     if (this.tg.HapticFeedback) this.tg.HapticFeedback.impactOccurred('light');
                     this.scheduleSync();
+                    this.updateEnergyUI();
 
-                    // Показываем рекламу каждые 300 кликов
+                    // Показываем рекламу каждые 100 кликов
                     this.clicksSinceLastAd += 1;
                     if (this.clicksSinceLastAd >= this.CLICKS_PER_AD) {
                         this.clicksSinceLastAd = 0;
