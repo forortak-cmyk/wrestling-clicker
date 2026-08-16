@@ -20,7 +20,7 @@
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-
+        
         body {
             background-color: var(--bg-main);
             color: var(--text-main);
@@ -50,7 +50,7 @@
             overflow-y: auto;
             position: relative;
         }
-
+        
         .view {
             display: none;
             width: 100%;
@@ -67,7 +67,8 @@
             justify-content: flex-start; 
             padding-top: 25px;
             position: relative;
-            overflow: hidden;
+            overflow-x: hidden;
+            overflow-y: auto;
         }
 
         /* Decorative background elements */
@@ -128,7 +129,7 @@
 
         /* Shared Components */
         .list-container { width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 10px; padding-bottom: 20px; }
-
+        
         .card-item {
             background: var(--bg-header);
             border: 1px solid var(--border-color);
@@ -173,7 +174,7 @@
         .ref-banner h2 { font-size: 18px; margin-bottom: 6px; }
         .ref-banner p { font-size: 13px; color: #aaa; line-height: 1.4; }
         .ref-bonus-highlight { color: var(--accent-gold); font-weight: bold; }
-
+        
         .ref-stats-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -248,7 +249,7 @@
         .sponsor-card p.desc { font-size: 12px; color: #aaa; margin-bottom: 12px; line-height: 1.3; }
         .sponsor-row { display: flex; justify-content: space-between; align-items: center; }
         .sponsor-price { font-weight: bold; font-size: 15px; color: white; }
-
+        
         .voucher-card {
             background: rgba(52, 199, 89, 0.1);
             border: 1px solid var(--accent-green);
@@ -341,7 +342,7 @@
 
     <!-- Content Area -->
     <div class="content">
-
+        
         <!-- 1. Shop -->
         <div id="shop-view" class="view">
             <h2 style="margin-bottom: 4px; font-size: 18px;">🛒 Բարելավումների խանութ</h2>
@@ -427,6 +428,19 @@
                 </div>
             </div>
 
+            <div class="energy-container" style="width:100%; max-width:400px; position:relative; z-index:1; margin-bottom:20px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                    <span style="font-size:13px; color: var(--text-muted);">⚡ Էներգիա</span>
+                    <span style="font-size:13px; font-weight:bold;" id="energyText">500 / 500</span>
+                </div>
+                <div style="width:100%; height:8px; background: var(--border-color); border-radius:4px; overflow:hidden;">
+                    <div id="energyBarFill" style="height:100%; width:100%; background: var(--accent-blue); transition: width 0.3s;"></div>
+                </div>
+                <button class="action-btn success-btn" id="restoreEnergyBtn" onclick="app.restoreEnergyWithAd()" style="width:100%; margin-top:8px; margin-left:0; padding:9px; font-size:12px;">
+                    📺 Վերականգնել 100 էներգիա (գովազդով)
+                </button>
+            </div>
+
             <div class="roulette-container">
                 <h3 style="font-size: 15px; margin-bottom: 8px;">🎰 Ամենօրյա անիվ</h3>
                 <div class="roulette-wheel" id="rouletteWheel">🎁</div>
@@ -436,7 +450,7 @@
             </div>
         </div>
 
-        <!-- 4. Business View (Мрцанакներ և Վաուչерներ) -->
+        <!-- 4. Business View (Мрцанակներ և Վաուչерներ) -->
         <div id="business-view" class="view">
             <div class="business-nav">
                 <button class="business-nav-btn active" id="tab-sponsors" onclick="app.switchBusinessTab('sponsors')">🎁 Մրցանակներ</button>
@@ -574,6 +588,18 @@
             }
         }
 
+        // Показывает Rewarded Video для восстановления энергии.
+        // ЗАГЛУШКА — замени на реальный вызов Adsgram Rewarded Video, например:
+        // return window.Adsgram.init({ blockId: 'REWARD_BLOCK_ID' }).show()
+        //     .then(() => true).catch(() => false);
+        // Должна вернуть true только если реклама была реально досмотрена до конца.
+        async function showRewardedAd() {
+            return new Promise(resolve => {
+                console.log('showRewardedAd: заглушка, всегда считается успешным просмотром');
+                setTimeout(() => resolve(true), 500);
+            });
+        }
+
         const app = {
             tg: window.Telegram.WebApp,
             state: {
@@ -587,11 +613,18 @@
                 myReferrerId: null,
                 refCount: 0,
                 vouchers: [],
-                lastSpinTime: 0
+                lastSpinTime: 0,
+                energy: 500,
+                energyUpdatedAt: Date.now()
             },
             pendingClicks: 0,
+            clicksSinceLastAd: 0,
+            CLICKS_PER_AD: 100,
             syncTimeout: null,
             MAX_POWER: 500,
+            MAX_ENERGY: 500,
+            ENERGY_REGEN_PER_MS: 100 / (60 * 60 * 1000), // 100 энергии в час — только для плавного отображения, сервер считает сам
+            energyTickInterval: null,
             timerInterval: null,
             dataLoaded: false,
 
@@ -613,6 +646,10 @@
                 });
 
                 this.setupEventListeners();
+
+                // Обновляем полоску энергии каждую секунду, чтобы было видно
+                // как она плавно наполняется даже без действий игрока
+                this.energyTickInterval = setInterval(() => this.updateEnergyUI(), 1000);
             },
 
             // Все запросы к серверу подписываются данными Telegram — сервер сам
@@ -642,12 +679,75 @@
                 this.state.vouchers = Array.isArray(user.vouchers) ? user.vouchers : [];
                 if (typeof user.refCount === 'number') this.state.refCount = user.refCount;
 
+                // Энергия — берём точное значение с сервера как отправную точку,
+                // дальше между запросами достраиваем регенерацию на клиенте для плавности
+                this.state.energy = typeof user.energy === 'number' ? user.energy : this.MAX_ENERGY;
+                this.state.energyUpdatedAt = Number(user.last_energy_update) || Date.now();
+
                 document.getElementById('score').innerText = this.state.score.toLocaleString();
                 this.updateShopUI();
+                this.updateEnergyUI();
+            },
+
+            // Текущая энергия "на глаз": последнее известное серверу значение +
+            // регенерация за прошедшее время − клики, которые ещё не отправлены на сервер
+            // (энергия тратится фиксированно, 1 за клик, независимо от силы клика)
+            getDisplayEnergy() {
+                const elapsed = Math.max(0, Date.now() - this.state.energyUpdatedAt);
+                const regenerated = Math.min(this.MAX_ENERGY, this.state.energy + elapsed * this.ENERGY_REGEN_PER_MS);
+                const afterPending = regenerated - this.pendingClicks;
+                return Math.max(0, Math.floor(afterPending));
+            },
+
+            updateEnergyUI() {
+                const textEl = document.getElementById('energyText');
+                const fillEl = document.getElementById('energyBarFill');
+                if (!textEl || !fillEl) return;
+
+                const current = this.getDisplayEnergy();
+                textEl.innerText = `${current} / ${this.MAX_ENERGY}`;
+                fillEl.style.width = `${Math.min(100, (current / this.MAX_ENERGY) * 100)}%`;
+            },
+
+            async restoreEnergyWithAd() {
+                const btn = document.getElementById('restoreEnergyBtn');
+                if (btn) btn.disabled = true;
+
+                try {
+                    const watched = await showRewardedAd();
+                    if (!watched) {
+                        if (btn) btn.disabled = false;
+                        return;
+                    }
+
+                    // Синхронизируем накопленные клики перед тем как трогать энергию на сервере
+                    await this.forceSync();
+
+                    const result = await this.callApi('restoreEnergy');
+                    if (!result.ok) {
+                        if (this.tg.showAlert) this.tg.showAlert("Փորձեք մի փոքր ուշ:");
+                        if (result.user) this.applyUserState(result.user);
+                        if (btn) btn.disabled = false;
+                        return;
+                    }
+
+                    this.applyUserState(result.user);
+                    if (this.tg.HapticFeedback) this.tg.HapticFeedback.notificationOccurred('success');
+                    if (this.tg.showAlert) this.tg.showAlert("⚡ +100 էներգիա!");
+                } finally {
+                    if (btn) btn.disabled = false;
+                }
             },
 
             setupEventListeners() {
                 document.getElementById('coinBtn').addEventListener('click', () => {
+                    // Проверяем энергию локально для мгновенной реакции —
+                    // сервер всё равно перепроверит и обрежет лишнее при синхронизации
+                    if (this.getDisplayEnergy() < 1) {
+                        if (this.tg.HapticFeedback) this.tg.HapticFeedback.notificationOccurred('error');
+                        return;
+                    }
+
                     // Локально сразу показываем клик — для отзывчивости.
                     // Сервер потом сам всё пересчитает и подтвердит.
                     this.state.score += this.state.clickPower;
@@ -657,6 +757,14 @@
                     this.pendingClicks += 1;
                     if (this.tg.HapticFeedback) this.tg.HapticFeedback.impactOccurred('light');
                     this.scheduleSync();
+                    this.updateEnergyUI();
+
+                    // Показываем рекламу каждые 100 кликов
+                    this.clicksSinceLastAd += 1;
+                    if (this.clicksSinceLastAd >= this.CLICKS_PER_AD) {
+                        this.clicksSinceLastAd = 0;
+                        showInterstitialAd();
+                    }
                 });
 
                 document.addEventListener('visibilitychange', () => {
@@ -684,7 +792,7 @@
             switchView(viewName, btnEl) {
                 document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
                 document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
-
+                
                 document.getElementById(viewName + '-view').classList.add('active');
                 if(btnEl) btnEl.classList.add('active');
 
@@ -750,13 +858,13 @@
             renderVouchers() {
                 const listEl = document.getElementById('my-vouchers-list');
                 const noMsg = document.getElementById('no-vouchers-msg');
-
+                
                 if (this.state.vouchers.length === 0) {
                     noMsg.style.display = 'block';
                     listEl.innerHTML = '';
                     return;
                 }
-
+                
                 noMsg.style.display = 'none';
                 listEl.innerHTML = this.state.vouchers.map(v => `
                     <div class="voucher-card">
@@ -781,7 +889,7 @@
             setupShopItem(id, powerAdd, costMultiplier) {
                 const costEl = document.getElementById(`upgradeCost${id}`);
                 const btnEl = document.getElementById(`buyBtn${id}`);
-
+                
                 if (this.state.clickPower + powerAdd > this.MAX_POWER) {
                     costEl.innerText = "Առավելագույնն է";
                     btnEl.innerText = "ՄԱՔՍ";
@@ -975,7 +1083,7 @@
             checkRouletteTimer() {
                 clearInterval(this.timerInterval);
                 const cooldown = 24 * 60 * 60 * 1000; // 24 hours
-
+                
                 const update = () => {
                     const now = Date.now();
                     const diff = (this.state.lastSpinTime + cooldown) - now;
