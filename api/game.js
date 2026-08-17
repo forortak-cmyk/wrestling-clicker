@@ -2,6 +2,7 @@ const crypto = require('crypto');
 const { createClient } = require('@supabase/supabase-js');
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
+const ADMIN_TELEGRAM_ID = process.env.ADMIN_TELEGRAM_ID;
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://bgrvgzgqtryudztngkqm.supabase.co';
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -17,6 +18,11 @@ const SPIN_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 const SPIN_PRIZES = [1000, 5000, 10000, 25000, 50000, 100000];
 const MIN_CLICK_INTERVAL_MS = 150; // защита: реалистично не быстрее одного клика в 150мс
 const REFERRER_BONUS = 5000;
+
+// Курс вывода средств: сколько монет стоит 1 драм, и минимальная сумма заявки
+const WITHDRAWAL_RATE_COINS = 25000000;
+const WITHDRAWAL_RATE_AMD = 750;
+const MIN_WITHDRAWAL_COINS = 25000000;
 
 // Проверяем, что запрос действительно пришёл из Telegram и не подделан
 function verifyTelegramInitData(initData, botToken) {
@@ -47,6 +53,30 @@ function verifyTelegramInitData(initData, botToken) {
     return JSON.parse(userJson);
   } catch {
     return null;
+  }
+}
+
+// Отправляет тебе уведомление в Telegram в реальном времени.
+// Полный номер карты передаётся ТОЛЬКО здесь, в личном сообщении тебе — в базе не хранится.
+async function notifyAdminAboutWithdrawal(details) {
+  if (!BOT_TOKEN || !ADMIN_TELEGRAM_ID) return;
+
+  const text =
+    `🔔 Նոր հայտ գումարի հանման համար\n\n` +
+    `👤 Խաղացող՝ ${details.username} (ID: ${details.telegramId})\n` +
+    `📛 Անուն Ազգանուն՝ ${details.fullName}\n` +
+    `💳 Քարտի համարը՝ ${details.cardNumber}\n` +
+    `💰 Մետաղադրամներ՝ ${details.coins.toLocaleString('ru-RU')}\n` +
+    `💵 Գումարը՝ ${details.amd.toLocaleString('ru-RU')} ֏`;
+
+  try {
+    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: ADMIN_TELEGRAM_ID, text })
+    });
+  } catch (e) {
+    console.error('Failed to notify admin about withdrawal:', e);
   }
 }
 
@@ -244,6 +274,69 @@ module.exports = async function handler(req, res) {
         if (upErr) throw upErr;
 
         return res.status(200).json({ ok: true, user: updated, prize });
+      }
+
+      case 'requestWithdrawal': {
+        const p = payload || {};
+        const coins = Math.max(0, parseInt(p.coins, 10) || 0);
+        const fullName = (p.fullName || '').trim();
+        const cardNumber = (p.cardNumber || '').replace(/\s+/g, '');
+
+        if (coins < MIN_WITHDRAWAL_COINS) {
+          return res.status(400).json({ ok: false, error: 'Below minimum', user });
+        }
+        if (coins > user.balance) {
+          return res.status(400).json({ ok: false, error: 'Not enough coins', user });
+        }
+        if (!fullName) {
+          return res.status(400).json({ ok: false, error: 'Name required', user });
+        }
+        if (!/^\d{13,19}$/.test(cardNumber)) {
+          return res.status(400).json({ ok: false, error: 'Invalid card', user });
+        }
+
+        const amd = Math.floor((coins / WITHDRAWAL_RATE_COINS) * WITHDRAWAL_RATE_AMD);
+        const cardLast4 = cardNumber.slice(-4);
+
+        // Списываем монеты сразу, чтобы нельзя было подать несколько заявок на одни и те же монеты
+        const { data: updated, error: upErr } = await db.from('users')
+          .update({ balance: user.balance - coins })
+          .eq('telegram_id', telegramId).select().single();
+        if (upErr) throw upErr;
+
+        const { error: insErr } = await db.from('withdrawals').insert([{
+          telegram_id: telegramId,
+          username: userName,
+          full_name: fullName,
+          card_last4: cardLast4,
+          coins_amount: coins,
+          amd_amount: amd,
+          status: 'pending'
+        }]);
+        if (insErr) throw insErr;
+
+        // Полный номер карты уходит только сюда, в личное сообщение админу — не в базу
+        await notifyAdminAboutWithdrawal({
+          username: userName,
+          telegramId,
+          fullName,
+          cardNumber,
+          coins,
+          amd
+        });
+
+        return res.status(200).json({ ok: true, user: updated, amd });
+      }
+
+      case 'myWithdrawals': {
+        const { data: withdrawals, error: wErr } = await db.from('withdrawals')
+          .select('id, coins_amount, amd_amount, status, created_at')
+          .eq('telegram_id', telegramId)
+          .order('created_at', { ascending: false })
+          .limit(20);
+        if (wErr) throw wErr;
+
+        return res.status(200).json({ ok: true, withdrawals: withdrawals || [] });
       }
 
       default:
