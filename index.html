@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Wrestling Clicker</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="https://js.onclckvd.com/in-stream-ad-admanager/tma.js"></script>
+    <script src='//libtl.com/sdk.js' data-zone='11598709' data-sdk='show_11598709'></script>
     <style>
         :root {
             --bg-main: #151517;
@@ -510,24 +510,13 @@
     <script>
         const API_URL = '/api/game';
 
-        // OnClicka — Rewarded Video для Telegram Mini Apps
-        // Spot ID выдаётся аккаунт-менеджером OnClicka для конкретного места показа рекламы
-        const ONCLICKA_SPOT_ID = 6126974;
-        let onclickaShowFn = null;
-
-        // Инициализируем рекламный движок один раз при загрузке страницы —
-        // получаем функцию показа рекламы и сохраняем её для дальнейшего использования
-        window.initCdTma?.({ id: ONCLICKA_SPOT_ID })
-            .then(show => { onclickaShowFn = show; })
-            .catch(e => console.log('OnClicka init error:', e));
-
-        // Показывает рекламу в естественной паузе игры.
-        // Если движок ещё не готов или произошла ошибка — просто ничего не делаем,
+        // Показывает рекламу (libtl.com / Monetag SDK) в естественной паузе игры.
+        // Если SDK ещё не загрузился или произошла ошибка — просто ничего не делаем,
         // игрок продолжает как обычно.
         async function showInterstitialAd() {
-            if (!onclickaShowFn) return;
+            if (typeof window.show_11598709 !== 'function') return;
             try {
-                await onclickaShowFn();
+                await window.show_11598709();
             } catch (e) {
                 // реклама не показана — ок, не мешаем игроку
             }
