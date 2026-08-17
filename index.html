@@ -437,85 +437,35 @@
             </div>
         </div>
 
-        <!-- 4. Business View (Мрцанակներ և Վաուչерներ) -->
+        <!-- 4. Withdrawal View (Գումարի հանում) -->
         <div id="business-view" class="view">
-            <div class="business-nav">
-                <button class="business-nav-btn active" id="tab-sponsors" onclick="app.switchBusinessTab('sponsors')">🎁 Մրցանակներ</button>
-                <button class="business-nav-btn" id="tab-vouchers" onclick="app.switchBusinessTab('vouchers')">🎟 Իմ մրցանակները</button>
+            <h2 style="margin-bottom: 4px; font-size: 18px;">💸 Գումարի հանում</h2>
+
+            <div class="ref-banner" style="text-align: left; padding: 14px 16px;">
+                <p style="font-size: 13px; margin-bottom: 4px;">Փոխարժեք՝ <span class="ref-bonus-highlight">25,000,000 💰 = 750 ֏</span></p>
+                <p style="font-size: 13px;">Նվազագույն հայտը՝ <span class="ref-bonus-highlight">750 ֏</span> (25,000,000 💰)</p>
             </div>
-            <div id="sponsors-container" style="width: 100%; display: flex; flex-direction: column; align-items: center; padding-bottom: 20px;">
 
-                <!-- Баннер "Скоро спонсоры" -->
-                <div style="width:100%; max-width:400px; background: linear-gradient(135deg, #1c1c1e, #2c2c2e); border: 1px solid #3a3a3c; border-radius: 16px; padding: 14px 16px; margin-bottom: 15px; text-align:center;">
-                    <p style="font-size:12px; color:#8e8e93;">🔜 Շուտով ավելանալու են գործընկեր հաստատությունների իրական մրցանակներ</p>
-                </div>
+            <div class="ref-banner" style="background: #2c2c2e; text-align: left; padding: 16px;">
+                <h3 style="font-size: 15px; margin-bottom: 10px;">Հայտ գումարի հանման համար</h3>
 
-                <!-- Статус Основатель -->
-                <div class="sponsor-card">
-                    <h3>🏅 «Հիմնադիր» կարգավիճակ</h3>
-                    <p class="desc">Դուք կդառնաք խաղի առաջին մասնակիցներից մեկը։ Հիմնադիր կարգավիճակը կտեսանելի լինի Ձեր պրոֆիլում հավերժ, անկախ հետագա փոփոխություններից։</p>
-                    <div class="sponsor-row">
-                        <span class="sponsor-price">10,000 💰</span>
-                        <button class="action-btn" onclick="app.buyVoucher('🏅 Հիմնադիր կարգավիճակ', 'Դուք հիմնադիրներից եք — կարգավիճակը ձեր պրոֆիլում հավերժ', 10000)">Ձեռք բերել</button>
-                    </div>
-                </div>
+                <p style="font-size: 12px; color: #8e8e93; margin-bottom: 4px;">Հանվող մետաղադրամներ</p>
+                <input type="number" id="withdrawCoinsInput" class="ref-input" placeholder="Օրինակ՝ 25000000" style="width: 100%; margin-bottom: 4px;">
+                <p style="font-size: 13px; color: var(--accent-gold); font-weight: bold; margin-bottom: 12px;" id="withdrawAmdPreview">= 0 ֏</p>
 
-                <!-- Упоминание в Instagram -->
-                <div class="sponsor-card">
-                    <h3>📢 Instagram-ում հիշատակում</h3>
-                    <p class="desc">Ձեր անունը/նիկը կտեղադրվի Wrestling Clicker-ի Instagram-ի պատմության/փոստի մեջ՝ որպես ակտիվ խաղացող։ Ուղարկեք Ձեր Instagram-ի նիկը wrestlingclicker@gmail.com հասցեին։</p>
-                    <div class="sponsor-row">
-                        <span class="sponsor-price">50,000 💰</span>
-                        <button class="action-btn" onclick="app.buyVoucher('📢 Instagram-ում հիշատակում', 'Ձեր նիկը կտեղադրվի մեր Instagram-ում — ուղարկեք նիկը wrestlingclicker@gmail.com', 50000)">Ձեռք բերել</button>
-                    </div>
-                </div>
+                <p style="font-size: 12px; color: #8e8e93; margin-bottom: 4px;">Անուն Ազգանուն (քարտի վրա)</p>
+                <input type="text" id="withdrawNameInput" class="ref-input" placeholder="Օրինակ՝ Արամ Առաքելյան" style="width: 100%; margin-bottom: 12px;">
 
-                <!-- Пополнение телефона -->
-                <div class="sponsor-card">
-                    <h3>📱 Հեռախոսի հաշվի համալրում</h3>
-                    <p class="desc">1,000 դրամ՝ Ձեր հեռախոսի հաշվի վրա։ Վաուչեր ստանալուց հետո ուղարկեք Ձեր հեռախոսի համարը wrestlingclicker@gmail.com հասցեին, կատարում ենք 24 ժամվա ընթացքում։</p>
-                    <div class="sponsor-row">
-                        <span class="sponsor-price">100,000 💰</span>
-                        <button class="action-btn" onclick="app.buyVoucher('📱 Հեռախոսի հաշվի համալրում 1,000 դրամ', 'Ուղարկեք Ձեր հեռախոսի համարը wrestlingclicker@gmail.com — կատարում ենք 24ժ-ի ընթացքում', 100000)">Ձեռք բերել</button>
-                    </div>
-                </div>
+                <p style="font-size: 12px; color: #8e8e93; margin-bottom: 4px;">Քարտի համարը</p>
+                <input type="text" id="withdrawCardInput" class="ref-input" placeholder="XXXX XXXX XXXX XXXX" inputmode="numeric" style="width: 100%; margin-bottom: 14px;">
 
-                <!-- Telegram Premium -->
-                <div class="sponsor-card">
-                    <h3>💎 Telegram Premium 1 ամիս</h3>
-                    <p class="desc">Telegram Premium բաժանորդագրություն 1 ամսով։ Վաուչեր ստանալուց հետո ուղարկեք Ձեր Telegram ID-ն wrestlingclicker@gmail.com հասցեին, ակտիվացնում ենք 24 ժամվա ընթացքում։</p>
-                    <div class="sponsor-row">
-                        <span class="sponsor-price">200,000 💰</span>
-                        <button class="action-btn" onclick="app.buyVoucher('💎 Telegram Premium 1 ամիս', 'Ուղարկեք Ձեր Telegram ID-ն wrestlingclicker@gmail.com — ակտիվացնում ենք 24ժ-ի ընթացքում', 200000)">Ձեռք բերել</button>
-                    </div>
-                </div>
-
-                <!-- Пополнение телефона 3000 -->
-                <div class="sponsor-card">
-                    <h3>📱 Հեռախոսի հաշվի համալրում (մեծ)</h3>
-                    <p class="desc">3,000 դրամ՝ Ձեր հեռախոսի հաշվի վրա։ Վաուչեր ստանալուց հետո ուղարկեք Ձեր հեռախոսի համարը wrestlingclicker@gmail.com հասցեին, կատարում ենք 24 ժամվա ընթացքում։</p>
-                    <div class="sponsor-row">
-                        <span class="sponsor-price">500,000 💰</span>
-                        <button class="action-btn" onclick="app.buyVoucher('📱 Հեռախոսի հաշվի համալրում 3,000 դրամ', 'Ուղարկեք Ձեր հեռախոսի համարը wrestlingclicker@gmail.com — կատարում ենք 24ժ-ի ընթացքում', 500000)">Ձեռք բերել</button>
-                    </div>
-                </div>
-
-                <!-- Telegram Premium 3 месяца -->
-                <div class="sponsor-card">
-                    <h3>💎 Telegram Premium 3 ամիս</h3>
-                    <p class="desc">Telegram Premium բաժանորդագրություն 3 ամսով — լավագույն ընտրությունն ակտիվ օգտատերերի համար։ Վաուչեր ստանալուց հետո ուղարկեք Ձեր Telegram ID-ն wrestlingclicker@gmail.com հասցեին, ակտիվացնում ենք 24 ժամվա ընթացքում։</p>
-                    <div class="sponsor-row">
-                        <span class="sponsor-price">1,000,000 💰</span>
-                        <button class="action-btn" onclick="app.buyVoucher('💎 Telegram Premium 3 ամիս', 'Ուղարկեք Ձեր Telegram ID-ն wrestlingclicker@gmail.com — ակտիվացնում ենք 24ժ-ի ընթացքում', 1000000)">Ձեռք բերել</button>
-                    </div>
-                </div>
-
+                <button class="action-btn success-btn" style="width: 100%; margin: 0; padding: 12px;" onclick="app.submitWithdrawal()">Ուղարկել հայտը</button>
+                <p id="withdrawMsg" style="font-size: 11px; font-weight: bold; margin-top: 8px;"></p>
             </div>
-            <div id="vouchers-container" style="width: 100%; display: none; flex-direction: column; align-items: center;">
-                <div id="my-vouchers-list" style="width: 100%; display: flex; flex-direction: column; align-items: center;"></div>
-                <p id="no-vouchers-msg" style="color: var(--text-muted); font-size: 14px; margin-top: 20px; text-align: center;">
-                    Դուք դեռևս չունեք ձեռք բերված մրցանակներ:<br>Անցե՛ք «Մրցանակներ» բաժին:
-                </p>
+
+            <div class="list-container">
+                <h3 style="font-size: 14px; color: #8e8e93; margin-bottom: 5px;">Ձեր հայտերը՝</h3>
+                <div id="withdrawalHistoryList">Բեռնվում է...</div>
             </div>
         </div>
 
@@ -550,7 +500,7 @@
             <span class="icon">🪙</span><span>Գլխավոր</span>
         </button>
         <button class="nav-btn" onclick="app.switchView('business', this)">
-            <span class="icon">💼</span><span>Բիզնես</span>
+            <span class="icon">💸</span><span>Հանել</span>
         </button>
         <button class="nav-btn" onclick="app.switchView('profile', this)">
             <span class="icon">👤</span><span>Անձնական</span>
@@ -603,6 +553,9 @@
             CLICKS_PER_AD: 100,
             syncTimeout: null,
             MAX_POWER: 500,
+            WITHDRAW_RATE_COINS: 25000000,
+            WITHDRAW_RATE_AMD: 750,
+            MIN_WITHDRAW_COINS: 25000000,
             timerInterval: null,
             dataLoaded: false,
 
@@ -680,6 +633,11 @@
                 document.addEventListener('visibilitychange', () => {
                     if (document.visibilityState === 'hidden') this.forceSync();
                 });
+
+                const withdrawInput = document.getElementById('withdrawCoinsInput');
+                if (withdrawInput) {
+                    withdrawInput.addEventListener('input', () => this.updateWithdrawPreview());
+                }
             },
 
             scheduleSync() {
@@ -707,25 +665,10 @@
                 if(btnEl) btnEl.classList.add('active');
 
                 if (viewName === 'referrals') this.loadReferralsData();
+                if (viewName === 'business') this.loadWithdrawalHistory();
                 if (viewName === 'profile') this.updateProfileUI();
                 if (viewName === 'main') this.checkRouletteTimer();
 
-                if (this.tg.HapticFeedback) this.tg.HapticFeedback.selectionChanged();
-            },
-
-            switchBusinessTab(tabName) {
-                document.getElementById('tab-sponsors').classList.remove('active');
-                document.getElementById('tab-vouchers').classList.remove('active');
-                document.getElementById(`tab-${tabName}`).classList.add('active');
-
-                if (tabName === 'sponsors') {
-                    document.getElementById('sponsors-container').style.display = 'flex';
-                    document.getElementById('vouchers-container').style.display = 'none';
-                } else {
-                    document.getElementById('sponsors-container').style.display = 'none';
-                    document.getElementById('vouchers-container').style.display = 'flex';
-                    this.renderVouchers();
-                }
                 if (this.tg.HapticFeedback) this.tg.HapticFeedback.selectionChanged();
             },
 
@@ -739,50 +682,95 @@
                 document.getElementById('profileRefCount').innerText = this.state.refCount;
             },
 
-            async buyVoucher(sponsorName, prizeDesc, cost) {
-                if (this.state.score < cost) {
-                    if (this.tg.HapticFeedback) this.tg.HapticFeedback.notificationOccurred('error');
-                    if (this.tg.showAlert) this.tg.showAlert("❌ Մետաղադրամները բավարար չեն գնման համար:");
-                    else alert("Մետաղադրամները բավարար չեն:");
+            updateWithdrawPreview() {
+                const input = document.getElementById('withdrawCoinsInput');
+                const preview = document.getElementById('withdrawAmdPreview');
+                if (!input || !preview) return;
+                const coins = Math.max(0, parseInt(input.value, 10) || 0);
+                const amd = Math.floor((coins / this.WITHDRAW_RATE_COINS) * this.WITHDRAW_RATE_AMD);
+                preview.innerText = `= ${amd.toLocaleString()} ֏`;
+            },
+
+            async submitWithdrawal() {
+                const coinsInput = document.getElementById('withdrawCoinsInput');
+                const nameInput = document.getElementById('withdrawNameInput');
+                const cardInput = document.getElementById('withdrawCardInput');
+                const msgEl = document.getElementById('withdrawMsg');
+
+                const coins = Math.max(0, parseInt(coinsInput.value, 10) || 0);
+                const fullName = nameInput.value.trim();
+                const cardNumber = cardInput.value.replace(/\s+/g, '');
+
+                if (coins < this.MIN_WITHDRAW_COINS) {
+                    msgEl.style.color = "var(--accent-red)";
+                    msgEl.innerText = `Նվազագույնը՝ ${this.MIN_WITHDRAW_COINS.toLocaleString()} 💰 (750 ֏):`;
+                    return;
+                }
+                if (coins > this.state.score) {
+                    msgEl.style.color = "var(--accent-red)";
+                    msgEl.innerText = "Բավարար մետաղադրամներ չկան:";
+                    return;
+                }
+                if (!fullName) {
+                    msgEl.style.color = "var(--accent-red)";
+                    msgEl.innerText = "Մուտքագրեք անուն ազգանունը:";
+                    return;
+                }
+                if (!/^\d{13,19}$/.test(cardNumber)) {
+                    msgEl.style.color = "var(--accent-red)";
+                    msgEl.innerText = "Ստուգեք քարտի համարը (13–19 թվանշան):";
                     return;
                 }
 
-                // Сначала синхронизируем клики, чтобы сервер знал актуальный баланс
                 await this.forceSync();
 
-                const result = await this.callApi('buyVoucher', { sponsor: sponsorName, prize: prizeDesc, cost });
+                const result = await this.callApi('requestWithdrawal', { coins, fullName, cardNumber });
 
                 if (!result.ok) {
-                    if (this.tg.showAlert) this.tg.showAlert("❌ Մետաղադրամները բավարար չեն գնման համար:");
-                    else alert("Մետաղադրամները բավարար չեն:");
+                    msgEl.style.color = "var(--accent-red)";
+                    msgEl.innerText = "Սխալ: Ստուգեք տվյալները և փորձեք կրկին:";
                     if (result.user) this.applyUserState(result.user);
                     return;
                 }
 
                 this.applyUserState(result.user);
+                coinsInput.value = '';
+                nameInput.value = '';
+                cardInput.value = '';
+                this.updateWithdrawPreview();
+
+                msgEl.style.color = "var(--accent-green)";
+                msgEl.innerText = "✅ Հայտն ընդունված է, սպասեք հաստատման:";
 
                 if (this.tg.HapticFeedback) this.tg.HapticFeedback.notificationOccurred('success');
-                if (this.tg.showAlert) this.tg.showAlert(`✅ Դուք հաջողությամբ ձեռք բերեցիք վաուչեր "${sponsorName}" հովանավորից: Այն կարող եք գտնել «Վաուչերներ» բաժնում:`);
+                if (this.tg.showAlert) this.tg.showAlert(`✅ Ձեր հայտն ընդունված է՝ ${result.amd.toLocaleString()} ֏: Գումարը կփոխանցվի մոտակա ժամանակում:`);
+
+                this.loadWithdrawalHistory();
             },
 
-            renderVouchers() {
-                const listEl = document.getElementById('my-vouchers-list');
-                const noMsg = document.getElementById('no-vouchers-msg');
+            async loadWithdrawalHistory() {
+                const result = await this.callApi('myWithdrawals');
+                const listEl = document.getElementById('withdrawalHistoryList');
+                if (!listEl) return;
 
-                if (this.state.vouchers.length === 0) {
-                    noMsg.style.display = 'block';
-                    listEl.innerHTML = '';
+                if (!result.ok || !result.withdrawals || result.withdrawals.length === 0) {
+                    listEl.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">Հայտեր դեռ չկան:</p>';
                     return;
                 }
 
-                noMsg.style.display = 'none';
-                listEl.innerHTML = this.state.vouchers.map(v => `
-                    <div class="voucher-card">
-                        <h3>🎟️ ${v.sponsor}</h3>
-                        <p style="font-size: 13px; color: #fff; margin-bottom: 5px;">${v.prize}</p>
-                        <p style="font-size: 12px; color: #aaa;">Ձեր պրոմոկոդը՝</p>
-                        <div class="voucher-code">${v.code}</div>
-                        <p style="font-size: 10px; color: var(--text-muted); margin-top: 5px;">Ձեռք բերման ամսաթիվը՝ ${new Date(v.date).toLocaleDateString('hy-AM')}</p>
+                const statusText = {
+                    pending: '⏳ Սպասման մեջ',
+                    completed: '✅ Կատարված',
+                    rejected: '❌ Մերժված'
+                };
+
+                listEl.innerHTML = result.withdrawals.map(w => `
+                    <div class="card-item">
+                        <div class="card-info">
+                            <h3>${w.amd_amount.toLocaleString()} ֏</h3>
+                            <p>${new Date(w.created_at).toLocaleDateString('hy-AM')}</p>
+                        </div>
+                        <div style="font-size: 12px; font-weight: bold;">${statusText[w.status] || w.status}</div>
                     </div>
                 `).join('');
             },
