@@ -158,16 +158,34 @@ module.exports = async function handler(req, res) {
         const item = SHOP_ITEMS[itemId];
         if (!item) return res.status(400).json({ ok: false, error: 'Unknown item' });
 
+        // Синхронизируем накопленные клики прямо здесь же, в этом запросе —
+        // чтобы не делать два похода в базу подряд (клиент раньше сначала звал sync, потом buyUpgrade)
+        const now = Date.now();
+        const lastSync = Number(user.last_sync) || now;
+        const elapsedMs = Math.max(0, now - lastSync);
+        const maxPlausibleClicks = Math.floor(elapsedMs / MIN_CLICK_INTERVAL_MS) + 5;
+        const claimedClicks = Math.max(0, parseInt(payload && payload.clicks, 10) || 0);
+        const validClicks = Math.min(claimedClicks, maxPlausibleClicks);
+        const clickEarned = validClicks * (user.click_power || 1);
+
+        const syncedBalance = (user.balance || 0) + clickEarned;
+        const syncedTotal = (user.total_earned || 0) + clickEarned;
+
         if (user.click_power + item.powerAdd > MAX_POWER) {
           return res.status(400).json({ ok: false, error: 'Max power reached', user });
         }
         const cost = user.click_power * item.costMultiplier;
-        if (user.balance < cost) {
+        if (syncedBalance < cost) {
           return res.status(400).json({ ok: false, error: 'Not enough coins', user });
         }
 
         const { data: updated, error: upErr } = await db.from('users')
-          .update({ balance: user.balance - cost, click_power: user.click_power + item.powerAdd })
+          .update({
+            balance: syncedBalance - cost,
+            total_earned: syncedTotal,
+            click_power: user.click_power + item.powerAdd,
+            last_sync: now
+          })
           .eq('telegram_id', telegramId).select().single();
         if (upErr) throw upErr;
 
@@ -282,10 +300,23 @@ module.exports = async function handler(req, res) {
         const fullName = (p.fullName || '').trim();
         const cardNumber = (p.cardNumber || '').replace(/\s+/g, '');
 
+        // Синхронизируем накопленные клики прямо здесь же, в этом запросе —
+        // чтобы не делать два похода в базу подряд
+        const now = Date.now();
+        const lastSync = Number(user.last_sync) || now;
+        const elapsedMs = Math.max(0, now - lastSync);
+        const maxPlausibleClicks = Math.floor(elapsedMs / MIN_CLICK_INTERVAL_MS) + 5;
+        const claimedClicks = Math.max(0, parseInt(p.clicks, 10) || 0);
+        const validClicks = Math.min(claimedClicks, maxPlausibleClicks);
+        const clickEarned = validClicks * (user.click_power || 1);
+
+        const syncedBalance = (user.balance || 0) + clickEarned;
+        const syncedTotal = (user.total_earned || 0) + clickEarned;
+
         if (coins < MIN_WITHDRAWAL_COINS) {
           return res.status(400).json({ ok: false, error: 'Below minimum', user });
         }
-        if (coins > user.balance) {
+        if (coins > syncedBalance) {
           return res.status(400).json({ ok: false, error: 'Not enough coins', user });
         }
         if (!fullName) {
@@ -300,7 +331,7 @@ module.exports = async function handler(req, res) {
 
         // Списываем монеты сразу, чтобы нельзя было подать несколько заявок на одни и те же монеты
         const { data: updated, error: upErr } = await db.from('users')
-          .update({ balance: user.balance - coins })
+          .update({ balance: syncedBalance - coins, total_earned: syncedTotal, last_sync: now })
           .eq('telegram_id', telegramId).select().single();
         if (upErr) throw upErr;
 
