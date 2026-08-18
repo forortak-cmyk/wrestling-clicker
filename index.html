@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Wrestling Clicker</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src='//libtl.com/sdk.js' data-zone='11598709' data-sdk='show_11598709'></script>
+    <script src="https://js.onclckvd.com/in-stream-ad-admanager/tma.js"></script>
     <style>
         :root {
             --bg-main: #151517;
@@ -510,13 +510,24 @@
     <script>
         const API_URL = '/api/game';
 
-        // Показывает рекламу (libtl.com / Monetag SDK) в естественной паузе игры.
-        // Если SDK ещё не загрузился или произошла ошибка — просто ничего не делаем,
+        // OnClicka — Rewarded Video для Telegram Mini Apps
+        // Spot ID выдаётся аккаунт-менеджером OnClicka для конкретного места показа рекламы
+        const ONCLICKA_SPOT_ID = 6126974;
+        let onclickaShowFn = null;
+
+        // Инициализируем рекламный движок один раз при загрузке страницы —
+        // получаем функцию показа рекламы и сохраняем её для дальнейшего использования
+        window.initCdTma?.({ id: ONCLICKA_SPOT_ID })
+            .then(show => { onclickaShowFn = show; })
+            .catch(e => console.log('OnClicka init error:', e));
+
+        // Показывает рекламу в естественной паузе игры.
+        // Если движок ещё не готов или произошла ошибка — просто ничего не делаем,
         // игрок продолжает как обычно.
         async function showInterstitialAd() {
-            if (typeof window.show_11598709 !== 'function') return;
+            if (!onclickaShowFn) return;
             try {
-                await window.show_11598709();
+                await onclickaShowFn();
             } catch (e) {
                 // реклама не показана — ок, не мешаем игроку
             }
@@ -711,9 +722,11 @@
                     return;
                 }
 
-                await this.forceSync();
+                clearTimeout(this.syncTimeout);
+                const clicks = this.pendingClicks;
+                this.pendingClicks = 0;
 
-                const result = await this.callApi('requestWithdrawal', { coins, fullName, cardNumber });
+                const result = await this.callApi('requestWithdrawal', { coins, fullName, cardNumber, clicks });
 
                 if (!result.ok) {
                     msgEl.style.color = "var(--accent-red)";
@@ -791,9 +804,13 @@
             },
 
             async buyClickPower(itemId) {
-                await this.forceSync();
+                // Забираем накопленные клики и отправляем их вместе с покупкой —
+                // одним запросом вместо двух подряд
+                clearTimeout(this.syncTimeout);
+                const clicks = this.pendingClicks;
+                this.pendingClicks = 0;
 
-                const result = await this.callApi('buyUpgrade', { itemId });
+                const result = await this.callApi('buyUpgrade', { itemId, clicks });
 
                 if (!result.ok) {
                     if (this.tg.HapticFeedback) this.tg.HapticFeedback.notificationOccurred('error');
