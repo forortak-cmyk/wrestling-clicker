@@ -522,6 +522,14 @@
             }
         }
 
+        // Экранирует HTML-спецсимволы — защита от вставки чужого вредоносного кода
+        // через имя пользователя Telegram (например, если кто-то поставит себе имя со скриптом)
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = String(str == null ? '' : str);
+            return div.innerHTML;
+        }
+
         const app = {
             tg: window.Telegram.WebApp,
             state: {
