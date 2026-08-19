@@ -329,12 +329,8 @@ module.exports = async function handler(req, res) {
         const amd = Math.floor((coins / WITHDRAWAL_RATE_COINS) * WITHDRAWAL_RATE_AMD);
         const cardLast4 = cardNumber.slice(-4);
 
-        // Списываем монеты сразу, чтобы нельзя было подать несколько заявок на одни и те же монеты
-        const { data: updated, error: upErr } = await db.from('users')
-          .update({ balance: syncedBalance - coins, total_earned: syncedTotal, last_sync: now })
-          .eq('telegram_id', telegramId).select().single();
-        if (upErr) throw upErr;
-
+        // Сначала создаём саму заявку — и только если это удалось, списываем монеты.
+        // Так игрок никогда не потеряет монеты "в никуда", если с записью что-то пойдёт не так
         const { error: insErr } = await db.from('withdrawals').insert([{
           telegram_id: telegramId,
           username: userName,
@@ -345,6 +341,20 @@ module.exports = async function handler(req, res) {
           status: 'pending'
         }]);
         if (insErr) throw insErr;
+
+        const { data: updated, error: upErr } = await db.from('users')
+          .update({ balance: syncedBalance - coins, total_earned: syncedTotal, last_sync: now })
+          .eq('telegram_id', telegramId)
+          .gte('balance', coins - clickEarned) // атомарная защита от двух одновременных заявок
+          .select().single();
+        if (upErr) {
+          // Баланса не хватило по факту (например, из-за гонки двух одновременных заявок) —
+          // помечаем уже созданную заявку как отклонённую, чтобы не осталась висеть заявка без денег
+          await db.from('withdrawals').update({ status: 'rejected' })
+            .eq('telegram_id', telegramId).eq('status', 'pending')
+            .eq('coins_amount', coins).eq('amd_amount', amd);
+          return res.status(400).json({ ok: false, error: 'Not enough coins', user });
+        }
 
         // Полный номер карты уходит только сюда, в личное сообщение админу — не в базу
         await notifyAdminAboutWithdrawal({
