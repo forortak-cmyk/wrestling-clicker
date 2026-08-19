@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Wrestling Clicker</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script async src='//libtl.com/sdk.js' data-zone='11598709' data-sdk='show_11598709'></script>
+    <script type="text/javascript" src="https://cdn.tgads.space/assets/js/adexium-widget.min.js"></script>
     <style>
         :root {
             --bg-main: #151517;
@@ -510,13 +510,28 @@
     <script>
         const API_URL = '/api/game';
 
-        // Показывает рекламу (libtl.com / Monetag SDK) в естественной паузе игры.
-        // Если SDK ещё не загрузился или произошла ошибка — просто ничего не делаем,
+        // Adexium — инициализируем виджет один раз при загрузке скрипта.
+        // autoMode() НЕ вызываем — реклама показывается только вручную,
+        // в нужных нам местах (каждые 100 кликов, после апгрейда, после колеса).
+        let adexiumWidget = null;
+        if (typeof AdexiumWidget !== 'undefined') {
+            adexiumWidget = new AdexiumWidget({
+                wid: 'b8c6ae6a-62a9-49b4-aeab-38857e038f38',
+                adFormat: 'interstitial'
+            });
+            adexiumWidget.on('adReceived', (ad) => adexiumWidget.displayAd(ad));
+            adexiumWidget.on('noAdFound', () => {
+                // рекламы под пользователя не нашлось — ок, не мешаем игроку
+            });
+        }
+
+        // Показывает рекламу (Adexium) в естественной паузе игры.
+        // Если виджет ещё не загрузился или произошла ошибка — просто ничего не делаем,
         // игрок продолжает как обычно.
         async function showInterstitialAd() {
-            if (typeof window.show_11598709 !== 'function') return;
+            if (!adexiumWidget) return;
             try {
-                await window.show_11598709();
+                adexiumWidget.requestAd('interstitial');
             } catch (e) {
                 // реклама не показана — ок, не мешаем игроку
             }
@@ -904,7 +919,7 @@
                 listEl.innerHTML = refs.map(r => `
                     <div class="card-item">
                         <div class="card-info">
-                            <h3>👤 ${r.username || 'Խաղացող'}</h3>
+                            <h3>👤 ${escapeHtml(r.username) || 'Խաղացող'}</h3>
                             <p>ID: ${r.telegram_id}</p>
                         </div>
                         <div style="font-size: 13px; font-weight: bold; color: var(--accent-gold);">
