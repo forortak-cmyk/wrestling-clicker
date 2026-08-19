@@ -517,12 +517,11 @@
         if (typeof AdexiumWidget !== 'undefined') {
             adexiumWidget = new AdexiumWidget({
                 wid: 'b8c6ae6a-62a9-49b4-aeab-38857e038f38',
-                adFormat: 'interstitial',
-                debug: true // ВРЕМЕННО для проверки — убрать перед релизом в продакшн!
+                adFormat: 'interstitial'
             });
             adexiumWidget.on('adReceived', (ad) => adexiumWidget.displayAd(ad));
             adexiumWidget.on('noAdFound', () => {
-                console.log('Adexium: no ad found');
+                // рекламы под пользователя не нашлось — ок, не мешаем игроку
             });
         }
 
