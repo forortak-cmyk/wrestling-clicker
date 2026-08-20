@@ -19,6 +19,11 @@
   th { color:#8e8e93; font-weight:normal; font-size: 11px; }
   td span.sub { color:#8e8e93; font-size:10px; }
   .loading, .error { text-align:center; color:#8e8e93; margin-top: 60px; font-size: 14px; }
+  textarea { width:100%; background:#1c1c1e; border:1px solid #2c2c2e; border-radius:12px; padding:12px; color:#fff; font-size:13px; font-family:inherit; resize:vertical; min-height:90px; }
+  .send-btn { width:100%; margin-top:10px; padding:12px; background:#34c759; color:#fff; border:none; border-radius:10px; font-weight:bold; font-size:14px; cursor:pointer; }
+  .send-btn:disabled { background:#3a3a3c; color:#8e8e93; cursor:not-allowed; }
+  .broadcast-msg { font-size:12px; margin-top:8px; font-weight:bold; }
+  tr.gold td { color:#ffd700; font-weight:bold; }
 </style>
 </head>
 <body>
@@ -61,6 +66,14 @@ async function load() {
         <td>${new Date(v.date).toLocaleString('ru-RU')}</td>
       </tr>`).join('');
 
+    const leaderboard = data.leaderboard || [];
+    const leaderboardRows = leaderboard.map((l, i) => `
+      <tr class="${i === 0 ? 'gold' : ''}">
+        <td>${i + 1}</td>
+        <td>${l.username}<br><span class="sub">ID: ${l.telegram_id}</span></td>
+        <td>${l.referrals}</td>
+      </tr>`).join('');
+
     contentEl.className = '';
     contentEl.innerHTML = `
       <div class="stats-grid">
@@ -69,6 +82,17 @@ async function load() {
         <div class="stat-card"><div class="title">Суммарно заработано</div><div class="value">${s.totalEarned.toLocaleString()} 💰</div></div>
         <div class="stat-card"><div class="title">Суммарный баланс</div><div class="value">${s.totalBalance.toLocaleString()} 💰</div></div>
       </div>
+
+      <h2>🏆 Лидерборд конкурса (по рефералам)</h2>
+      <table>
+        <thead><tr><th>#</th><th>Игрок</th><th>Рефералов</th></tr></thead>
+        <tbody>${leaderboardRows || '<tr><td colspan="3">Пока пусто</td></tr>'}</tbody>
+      </table>
+
+      <h2>📢 Рассылка всем игрокам</h2>
+      <textarea id="broadcastText" placeholder="Текст сообщения для рассылки..."></textarea>
+      <button class="send-btn" id="sendBtn" onclick="sendBroadcast()">Отправить всем (${s.totalUsers})</button>
+      <p class="broadcast-msg" id="broadcastMsg"></p>
 
       <h2>По спонсорам</h2>
       <table>
@@ -85,6 +109,50 @@ async function load() {
   } catch (e) {
     contentEl.className = 'error';
     contentEl.innerText = 'Ошибка загрузки данных';
+  }
+}
+
+async function sendBroadcast() {
+  const textEl = document.getElementById('broadcastText');
+  const btn = document.getElementById('sendBtn');
+  const msgEl = document.getElementById('broadcastMsg');
+
+  const text = textEl.value.trim();
+  if (!text) {
+    msgEl.style.color = '#ff3b30';
+    msgEl.innerText = 'Введите текст сообщения';
+    return;
+  }
+
+  if (!confirm('Отправить это сообщение всем игрокам? Действие нельзя отменить.')) return;
+
+  btn.disabled = true;
+  msgEl.style.color = '#8e8e93';
+  msgEl.innerText = 'Отправка... это может занять время';
+
+  try {
+    const res = await fetch('/api/broadcast', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ initData: tg.initData, text })
+    });
+    const data = await res.json();
+
+    if (!data.ok) {
+      msgEl.style.color = '#ff3b30';
+      msgEl.innerText = 'Ошибка: ' + (data.error || 'неизвестная');
+      btn.disabled = false;
+      return;
+    }
+
+    msgEl.style.color = '#34c759';
+    msgEl.innerText = `Готово: доставлено ${data.sent} из ${data.total} (не удалось: ${data.failed})`;
+    textEl.value = '';
+    btn.disabled = false;
+  } catch (e) {
+    msgEl.style.color = '#ff3b30';
+    msgEl.innerText = 'Ошибка сети';
+    btn.disabled = false;
   }
 }
 
