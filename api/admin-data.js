@@ -87,6 +87,24 @@ module.exports = async function handler(req, res) {
 
     voucherLog.sort((a, b) => new Date(b.date) - new Date(a.date));
 
+    // Лидерборд по рефералам — для конкурса "кто больше пригласит за 3 дня"
+    const referrerCounts = {};
+    const usersById = {};
+    for (const u of users) {
+      usersById[u.telegram_id] = u;
+      if (u.referrer_id) {
+        referrerCounts[u.referrer_id] = (referrerCounts[u.referrer_id] || 0) + 1;
+      }
+    }
+    const leaderboard = Object.entries(referrerCounts)
+      .map(([refId, count]) => ({
+        telegram_id: refId,
+        username: (usersById[refId] && usersById[refId].username) || 'Խաղացող',
+        referrals: count
+      }))
+      .sort((a, b) => b.referrals - a.referrals)
+      .slice(0, 20);
+
     return res.status(200).json({
       ok: true,
       stats: {
@@ -96,7 +114,8 @@ module.exports = async function handler(req, res) {
         totalVouchers,
         perSponsor
       },
-      vouchers: voucherLog
+      vouchers: voucherLog,
+      leaderboard
     });
   } catch (e) {
     console.error('Admin API error:', e);
