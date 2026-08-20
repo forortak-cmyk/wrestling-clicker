@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "api/broadcast.js": {
+      "maxDuration": 60
+    }
+  }
+}
