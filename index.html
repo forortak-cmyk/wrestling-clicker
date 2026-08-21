@@ -515,30 +515,54 @@
     <script>
         const API_URL = '/api/game';
 
-        // Adexium — инициализируем виджет один раз при загрузке скрипта.
+        // Adexium — инициализируем виджет с несколькими попытками (на случай, если
+        // рекламный скрипт ещё не успел загрузиться к моменту выполнения этого кода).
         // autoMode() НЕ вызываем — реклама показывается только вручную,
         // в нужных нам местах (каждые 100 кликов, после апгрейда, после колеса).
         let adexiumWidget = null;
-        if (typeof AdexiumWidget !== 'undefined') {
-            adexiumWidget = new AdexiumWidget({
-                wid: 'b8c6ae6a-62a9-49b4-aeab-38857e038f38',
-                adFormat: 'interstitial'
-            });
-            adexiumWidget.on('adReceived', (ad) => adexiumWidget.displayAd(ad));
-            adexiumWidget.on('noAdFound', () => {
-                // рекламы под пользователя не нашлось — ок, не мешаем игроку
-            });
+
+        function initAdexiumWidget(attemptsLeft) {
+            if (typeof AdexiumWidget !== 'undefined') {
+                adexiumWidget = new AdexiumWidget({
+                    wid: 'b8c6ae6a-62a9-49b4-aeab-38857e038f38',
+                    adFormat: 'interstitial'
+                });
+                adexiumWidget.on('adReceived', (ad) => {
+                    console.log('[Adexium] реклама получена, показываем');
+                    adexiumWidget.displayAd(ad);
+                });
+                adexiumWidget.on('noAdFound', () => {
+                    // Рекламы под этого пользователя в моменте не нашлось — это нормально,
+                    // не 100% запросов заполняются рекламодателями, ничего не делаем
+                    console.log('[Adexium] реклама не найдена (нормально, не всегда есть показ)');
+                });
+                console.log('[Adexium] виджет инициализирован');
+                return;
+            }
+
+            if (attemptsLeft <= 0) {
+                console.warn('[Adexium] не удалось загрузить рекламный скрипт после нескольких попыток');
+                return;
+            }
+
+            // Скрипт ещё не подгрузился — пробуем снова через секунду
+            setTimeout(() => initAdexiumWidget(attemptsLeft - 1), 1000);
         }
+
+        initAdexiumWidget(5);
 
         // Показывает рекламу (Adexium) в естественной паузе игры.
         // Если виджет ещё не загрузился или произошла ошибка — просто ничего не делаем,
         // игрок продолжает как обычно.
         async function showInterstitialAd() {
-            if (!adexiumWidget) return;
+            if (!adexiumWidget) {
+                console.warn('[Adexium] попытка показать рекламу, но виджет ещё не готов');
+                return;
+            }
             try {
                 adexiumWidget.requestAd('interstitial');
             } catch (e) {
-                // реклама не показана — ок, не мешаем игроку
+                console.error('[Adexium] ошибка запроса рекламы:', e);
             }
         }
 
