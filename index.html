@@ -6,6 +6,7 @@
     <title>Wrestling Clicker</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script type="text/javascript" src="https://cdn.tgads.space/assets/js/adexium-widget.min.js"></script>
+    <script async src='//libtl.com/sdk.js' data-zone='11598709' data-sdk='show_11598709'></script>
     <style>
         :root {
             --bg-main: #151517;
@@ -346,33 +347,21 @@
         <!-- 1. Shop -->
         <div id="shop-view" class="view">
             <h2 style="margin-bottom: 4px; font-size: 18px;">🛒 Բարելավումների խանութ</h2>
-            <p style="margin-bottom: 15px; font-size: 12px; color: var(--accent-red);">Առավելագույն ուժը՝ մինչև 500 միավոր մեկ սեղմման համար</p>
+            <p style="margin-bottom: 15px; font-size: 12px; color: var(--accent-red);">Առավելագույն ուժը՝ մինչև 750 միավոր մեկ սեղմման համար</p>
+
             <div class="list-container">
-                <div class="card-item">
-                    <div class="card-info">
-                        <h3>Թեթև մարզում (+1)</h3>
-                        <p>Ընթացիկ ուժը՝ <span class="currentPowerDisplay">1</span> / 500</p>
-                        <p class="cost" id="upgradeCost1">Գինը՝ 100 💰</p>
+                <div class="card-item" style="flex-direction: column; align-items: stretch; border-color: var(--accent-blue);">
+                    <div class="card-info" style="margin-bottom: 10px;">
+                        <h3 id="activeShopName">Բեռնվում է...</h3>
+                        <p>Ընթացիկ ուժը՝ <span class="currentPowerDisplay">1</span> / 750</p>
+                        <p class="cost" id="upgradeCost1">Գինը՝ ... 💰</p>
                     </div>
-                    <button class="action-btn" id="buyBtn1">Գնել</button>
-                </div>
-                <div class="card-item">
-                    <div class="card-info">
-                        <h3>Սպորտային սնունդ (+5)</h3>
-                        <p>Ընթացիկ ուժը՝ <span class="currentPowerDisplay">1</span> / 500</p>
-                        <p class="cost" id="upgradeCost2">Գինը՝ 450 💰</p>
-                    </div>
-                    <button class="action-btn" id="buyBtn2">Գնել</button>
-                </div>
-                <div class="card-item">
-                    <div class="card-info">
-                        <h3>Սպարինգ (+10)</h3>
-                        <p>Ընթացիկ ուժը՝ <span class="currentPowerDisplay">1</span> / 500</p>
-                        <p class="cost" id="upgradeCost3">Գինը՝ 800 💰</p>
-                    </div>
-                    <button class="action-btn" id="buyBtn3">Գնել</button>
+                    <button class="action-btn" id="buyBtn1" style="margin-left: 0; width: 100%; padding: 10px;">Գնել (+1)</button>
                 </div>
             </div>
+
+            <h3 style="font-size: 13px; color: #8e8e93; margin: 15px 0 8px;">Բոլոր մարզադահլիճները՝</h3>
+            <div class="list-container" id="shopTiersList"></div>
         </div>
 
         <!-- 2. Referrals -->
@@ -532,9 +521,10 @@
                     adexiumWidget.displayAd(ad);
                 });
                 adexiumWidget.on('noAdFound', () => {
-                    // Рекламы под этого пользователя в моменте не нашлось — это нормально,
-                    // не 100% запросов заполняются рекламодателями, ничего не делаем
-                    console.log('[Adexium] реклама не найдена (нормально, не всегда есть показ)');
+                    // У Adexium в моменте нет рекламы под этого пользователя —
+                    // пробуем показать резервную рекламу от Monetag вместо неё
+                    console.log('[Adexium] реклама не найдена, пробуем Monetag как резерв');
+                    showMonetagAd();
                 });
                 console.log('[Adexium] виджет инициализирован');
                 return;
@@ -551,18 +541,35 @@
 
         initAdexiumWidget(5);
 
-        // Показывает рекламу (Adexium) в естественной паузе игры.
-        // Если виджет ещё не загрузился или произошла ошибка — просто ничего не делаем,
-        // игрок продолжает как обычно.
+        // Резервная реклама — Monetag. Вызывается, когда у Adexium нет показа.
+        async function showMonetagAd() {
+            if (typeof window.show_11598709 !== 'function') {
+                console.warn('[Monetag] SDK ещё не загрузился, показать резервную рекламу нечем');
+                return;
+            }
+            try {
+                await window.show_11598709();
+            } catch (e) {
+                // и резервная реклама не показалась — ок, не мешаем игроку
+                console.log('[Monetag] реклама не показана:', e);
+            }
+        }
+
+        // Показывает рекламу в естественной паузе игры. Сначала пробуем Adexium,
+        // и если у него нет рекламы (событие 'noAdFound') — автоматически
+        // подключается Monetag как резервный источник (см. initAdexiumWidget выше).
         async function showInterstitialAd() {
             if (!adexiumWidget) {
-                console.warn('[Adexium] попытка показать рекламу, но виджет ещё не готов');
+                // Adexium ещё не успел загрузиться — сразу пробуем резервный Monetag
+                console.warn('[Adexium] виджет ещё не готов, сразу пробуем Monetag');
+                showMonetagAd();
                 return;
             }
             try {
                 adexiumWidget.requestAd('interstitial');
             } catch (e) {
-                console.error('[Adexium] ошибка запроса рекламы:', e);
+                console.error('[Adexium] ошибка запроса рекламы, пробуем Monetag:', e);
+                showMonetagAd();
             }
         }
 
@@ -593,7 +600,7 @@
             clicksSinceLastAd: 0,
             CLICKS_PER_AD: 100,
             syncTimeout: null,
-            MAX_POWER: 500,
+            MAX_POWER: 750,
             WITHDRAW_RATE_COINS: 250000000,
             WITHDRAW_RATE_AMD: 750,
             MIN_WITHDRAW_COINS: 250000000,
@@ -822,36 +829,86 @@
                 document.querySelectorAll('.currentPowerDisplay').forEach(el => el.innerText = this.state.clickPower);
                 document.getElementById('powerLabel').innerText = `+${this.state.clickPower} մեկ սեղմման համար`;
 
-                this.setupShopItem(1, 1, 100);
-                this.setupShopItem(2, 5, 450);
-                this.setupShopItem(3, 10, 800);
+                this.renderActiveShop();
+                this.renderShopTiersList();
             },
 
-            setupShopItem(id, powerAdd, costMultiplier) {
-                const costEl = document.getElementById(`upgradeCost${id}`);
-                const btnEl = document.getElementById(`buyBtn${id}`);
+            // 10 последовательных "залов" — каждый открывается по мере роста силы клика.
+            // Каждая покупка даёт ровно +1 к силе клика, цена = сила клика × 120.
+            SHOP_TIERS: [
+                { from: 1,   to: 75,  name: '🥋 Սկսնակի մարզում' },
+                { from: 76,  to: 150, name: '🏋️ Ընդհանուր ֆիզիկական պատրաստվածք' },
+                { from: 151, to: 225, name: '💪 Ուժային վարժություններ' },
+                { from: 226, to: 300, name: '🥗 Սպորտային սնունդ' },
+                { from: 301, to: 375, name: '🧑‍🏫 Անհատական մարզիչ' },
+                { from: 376, to: 450, name: '🏟️ Պրոֆեսիոնալ ակադեմիա' },
+                { from: 451, to: 525, name: '🇦🇲 Ազգային հավաքական' },
+                { from: 526, to: 600, name: '🌍 Միջազգային փորձ' },
+                { from: 601, to: 675, name: '🏆 Չեմպիոնական մակարդակ' },
+                { from: 676, to: 750, name: '👑 Լեգենդի կարգավիճակ' }
+            ],
+            SHOP_COST_MULTIPLIER: 600,
 
-                if (this.state.clickPower + powerAdd > this.MAX_POWER) {
-                    costEl.innerText = "Առավելագույնն է";
-                    btnEl.innerText = "ՄԱՔՍ";
+            getCurrentShopTier() {
+                return this.SHOP_TIERS.find(t => this.state.clickPower >= t.from && this.state.clickPower <= t.to)
+                    || this.SHOP_TIERS[this.SHOP_TIERS.length - 1];
+            },
+
+            renderActiveShop() {
+                const nameEl = document.getElementById('activeShopName');
+                const costEl = document.getElementById('upgradeCost1');
+                const btnEl = document.getElementById('buyBtn1');
+                if (!nameEl || !costEl || !btnEl) return;
+
+                const tier = this.getCurrentShopTier();
+                nameEl.innerText = `${tier.name} (+1)`;
+
+                if (this.state.clickPower >= this.MAX_POWER) {
+                    costEl.innerText = 'Առավելագույնն է';
+                    btnEl.innerText = 'ՄԱՔՍ';
                     btnEl.disabled = true;
                 } else {
-                    const cost = this.state.clickPower * costMultiplier;
+                    const cost = this.state.clickPower * this.SHOP_COST_MULTIPLIER;
                     costEl.innerText = `Գինը՝ ${cost.toLocaleString()} 💰`;
-                    btnEl.innerText = "Գնել";
+                    btnEl.innerText = 'Գնել (+1)';
                     btnEl.disabled = false;
-                    btnEl.onclick = () => this.buyClickPower(id);
+                    btnEl.onclick = () => this.buyClickPower();
                 }
             },
 
-            async buyClickPower(itemId) {
+            renderShopTiersList() {
+                const listEl = document.getElementById('shopTiersList');
+                if (!listEl) return;
+
+                listEl.innerHTML = this.SHOP_TIERS.map(tier => {
+                    let statusHtml;
+                    if (this.state.clickPower > tier.to) {
+                        statusHtml = `<span style="color: var(--accent-green); font-size: 12px; font-weight: bold;">✅ Ավարտված</span>`;
+                    } else if (this.state.clickPower >= tier.from) {
+                        statusHtml = `<span style="color: var(--accent-blue); font-size: 12px; font-weight: bold;">▶ Ընթացիկ</span>`;
+                    } else {
+                        statusHtml = `<span style="color: var(--text-muted); font-size: 12px;">🔒 ${tier.from} ուժից</span>`;
+                    }
+                    return `
+                        <div class="card-item">
+                            <div class="card-info">
+                                <h3 style="font-size: 13px;">${tier.name}</h3>
+                                <p>Ուժը՝ ${tier.from}–${tier.to}</p>
+                            </div>
+                            ${statusHtml}
+                        </div>
+                    `;
+                }).join('');
+            },
+
+            async buyClickPower() {
                 // Забираем накопленные клики и отправляем их вместе с покупкой —
                 // одним запросом вместо двух подряд
                 clearTimeout(this.syncTimeout);
                 const clicks = this.pendingClicks;
                 this.pendingClicks = 0;
 
-                const result = await this.callApi('buyUpgrade', { itemId, clicks });
+                const result = await this.callApi('buyUpgrade', { itemId: 1, clicks });
 
                 if (!result.ok) {
                     if (this.tg.HapticFeedback) this.tg.HapticFeedback.notificationOccurred('error');
