@@ -6,11 +6,9 @@ const ADMIN_TELEGRAM_ID = process.env.ADMIN_TELEGRAM_ID;
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://bgrvgzgqtryudztngkqm.supabase.co';
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-const MAX_POWER = 500;
+const MAX_POWER = 750;
 const SHOP_ITEMS = {
-  1: { powerAdd: 1, costMultiplier: 100 },
-  2: { powerAdd: 5, costMultiplier: 450 },
-  3: { powerAdd: 10, costMultiplier: 800 }
+  1: { powerAdd: 1, costMultiplier: 600 }
 };
 const REF_FLAT_BONUS = 10000;
 const REF_PERCENT = 0.1;
