@@ -20,9 +20,9 @@ const MIN_CLICK_INTERVAL_MS = 150; // защита: реалистично не 
 const REFERRER_BONUS = 5000;
 
 // Курс вывода средств: сколько монет стоит 1 драм, и минимальная сумма заявки
-const WITHDRAWAL_RATE_COINS = 25000000;
+const WITHDRAWAL_RATE_COINS = 250000000;
 const WITHDRAWAL_RATE_AMD = 750;
-const MIN_WITHDRAWAL_COINS = 25000000;
+const MIN_WITHDRAWAL_COINS = 250000000;
 
 // Проверяем, что запрос действительно пришёл из Telegram и не подделан
 function verifyTelegramInitData(initData, botToken) {
