@@ -323,13 +323,14 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            font-size: 10px;
+            font-size: 9px;
             cursor: pointer;
             flex: 1;
-            gap: 4px;
+            gap: 3px;
             transition: color 0.2s;
+            padding: 0 1px;
         }
-        .nav-btn .icon { font-size: 20px; }
+        .nav-btn .icon { font-size: 18px; }
         .nav-btn.active { color: var(--accent-blue); font-weight: bold; }
     </style>
 </head>
@@ -463,6 +464,25 @@
             </div>
         </div>
 
+        <!-- 5. Bonuses View -->
+        <div id="bonuses-view" class="view">
+            <h2 style="margin-bottom: 15px; font-size: 18px;">🎁 Բոնուսներ</h2>
+
+            <div class="ref-banner" style="text-align: left; padding: 16px;">
+                <h3 style="font-size: 15px; margin-bottom: 10px;">📅 Ամենօրյա բոնուս</h3>
+                <div id="dailyBonusGrid" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-bottom: 12px;"></div>
+                <button class="action-btn success-btn" id="dailyBonusBtn" style="width: 100%; margin: 0; padding: 12px;" onclick="app.claimDailyBonus()">Ստանալ</button>
+                <p id="dailyBonusMsg" style="font-size: 11px; color: var(--text-muted); margin-top: 8px; text-align: center;"></p>
+            </div>
+
+            <div class="ref-banner" style="text-align: left; padding: 16px;">
+                <h3 style="font-size: 15px; margin-bottom: 6px;">🎬 Դիտիր գովազդ</h3>
+                <p style="font-size: 12px; color: #aaa; margin-bottom: 12px;">Յուրաքանչյուր դիտման համար՝ <span class="ref-bonus-highlight">+30,000 💰</span></p>
+                <button class="action-btn success-btn" id="watchAdBtn" style="width: 100%; margin: 0; padding: 12px;" onclick="app.watchAdForCoins()">Դիտել գովազդ</button>
+                <p id="watchAdMsg" style="font-size: 11px; color: var(--text-muted); margin-top: 8px; text-align: center;"></p>
+            </div>
+        </div>
+
         <!-- 5. Profile View -->
         <div id="profile-view" class="view">
             <h2 style="font-size: 18px; margin-bottom: 15px; color: #fff;">👤 Հաշվի կարգավիճակ</h2>
@@ -495,6 +515,9 @@
         </button>
         <button class="nav-btn" onclick="app.switchView('business', this)">
             <span class="icon">💸</span><span>Հանել</span>
+        </button>
+        <button class="nav-btn" onclick="app.switchView('bonuses', this)">
+            <span class="icon">🎁</span><span>Բոնուսներ</span>
         </button>
         <button class="nav-btn" onclick="app.switchView('profile', this)">
             <span class="icon">👤</span><span>Անձնական</span>
@@ -594,7 +617,10 @@
                 myReferrerId: null,
                 refCount: 0,
                 vouchers: [],
-                lastSpinTime: 0
+                lastSpinTime: 0,
+                dailyStreak: 0,
+                lastDailyClaim: 0,
+                lastAdRewardClaim: 0
             },
             pendingClicks: 0,
             clicksSinceLastAd: 0,
@@ -653,9 +679,14 @@
                 this.state.lastSpinTime = Number(user.last_spin) || 0;
                 this.state.vouchers = Array.isArray(user.vouchers) ? user.vouchers : [];
                 if (typeof user.refCount === 'number') this.state.refCount = user.refCount;
+                this.state.dailyStreak = user.daily_streak || 0;
+                this.state.lastDailyClaim = Number(user.last_daily_claim) || 0;
+                this.state.lastAdRewardClaim = Number(user.last_ad_reward_claim) || 0;
 
                 document.getElementById('score').innerText = this.state.score.toLocaleString();
                 this.updateShopUI();
+                this.renderDailyBonus();
+                this.renderWatchAdButton();
             },
 
             setupEventListeners() {
@@ -716,6 +747,7 @@
                 if (viewName === 'business') this.loadWithdrawalHistory();
                 if (viewName === 'profile') this.updateProfileUI();
                 if (viewName === 'main') this.checkRouletteTimer();
+                if (viewName === 'bonuses') this.startBonusesTimer();
 
                 if (this.tg.HapticFeedback) this.tg.HapticFeedback.selectionChanged();
             },
@@ -1109,6 +1141,157 @@
 
                 update();
                 this.timerInterval = setInterval(update, 1000);
+            },
+
+            DAILY_BONUS_REWARDS: [10000, 30000, 50000, 70000, 90000, 110000, 130000],
+            DAILY_BONUS_COOLDOWN_MS: 24 * 60 * 60 * 1000,
+            DAILY_BONUS_RESET_MS: 48 * 60 * 60 * 1000,
+            AD_REWARD_COOLDOWN_MS: 30 * 1000,
+            bonusesTimerInterval: null,
+
+            startBonusesTimer() {
+                clearInterval(this.bonusesTimerInterval);
+                this.renderDailyBonus();
+                this.renderWatchAdButton();
+                this.bonusesTimerInterval = setInterval(() => {
+                    this.renderDailyBonus();
+                    this.renderWatchAdButton();
+                }, 1000);
+            },
+
+            renderDailyBonus() {
+                const gridEl = document.getElementById('dailyBonusGrid');
+                const btnEl = document.getElementById('dailyBonusBtn');
+                const msgEl = document.getElementById('dailyBonusMsg');
+                if (!gridEl || !btnEl || !msgEl) return;
+
+                const now = Date.now();
+                const last = this.state.lastDailyClaim || 0;
+                const streak = this.state.dailyStreak || 0;
+                const elapsed = last ? now - last : Infinity;
+
+                const willReset = !last || elapsed >= this.DAILY_BONUS_RESET_MS;
+                const canClaim = !last || elapsed >= this.DAILY_BONUS_COOLDOWN_MS;
+                const displayStreak = willReset ? 0 : streak;
+
+                let nextClaimDay = null;
+                if (canClaim) {
+                    nextClaimDay = willReset ? 1 : (streak % 7) + 1;
+                }
+
+                gridEl.innerHTML = this.DAILY_BONUS_REWARDS.map((reward, idx) => {
+                    const day = idx + 1;
+                    let style, label;
+                    if (day <= displayStreak) {
+                        style = 'background: rgba(52,199,89,0.15); border: 1px solid var(--accent-green); color: var(--accent-green);';
+                        label = '✅';
+                    } else if (day === nextClaimDay) {
+                        style = 'background: rgba(10,132,255,0.15); border: 1px solid var(--accent-blue); color: var(--accent-blue);';
+                        label = '▶';
+                    } else {
+                        style = 'background: var(--bg-header); border: 1px solid var(--border-color); color: var(--text-muted);';
+                        label = '🔒';
+                    }
+                    return `
+                        <div style="${style} border-radius: 8px; padding: 6px 2px; text-align: center;">
+                            <div style="font-size: 10px; margin-bottom: 2px;">${day}օր</div>
+                            <div style="font-size: 12px;">${label}</div>
+                            <div style="font-size: 9px; margin-top: 2px;">${(reward / 1000)}հ</div>
+                        </div>
+                    `;
+                }).join('');
+
+                if (canClaim) {
+                    const rewardForNext = this.DAILY_BONUS_REWARDS[nextClaimDay - 1];
+                    btnEl.disabled = false;
+                    btnEl.innerText = `Ստանալ (+${rewardForNext.toLocaleString()} 💰)`;
+                    msgEl.innerText = '';
+                } else {
+                    btnEl.disabled = true;
+                    const diff = (last + this.DAILY_BONUS_COOLDOWN_MS) - now;
+                    const hours = Math.floor(diff / (1000 * 60 * 60));
+                    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+                    btnEl.innerText = 'Ստացված է';
+                    msgEl.innerText = `Հաջորդ բոնուսը՝ ${hours}ժ ${minutes}ր ${seconds}վ հետո`;
+                }
+            },
+
+            async claimDailyBonus() {
+                const btnEl = document.getElementById('dailyBonusBtn');
+                const msgEl = document.getElementById('dailyBonusMsg');
+                if (btnEl) btnEl.disabled = true;
+
+                const result = await this.callApi('claimDailyBonus');
+
+                if (!result.ok) {
+                    if (msgEl) {
+                        msgEl.style.color = 'var(--accent-red)';
+                        msgEl.innerText = 'Դեռ ժամանակը չի հասել:';
+                    }
+                    if (result.user) this.applyUserState(result.user);
+                    return;
+                }
+
+                this.applyUserState(result.user);
+                if (this.tg.HapticFeedback) this.tg.HapticFeedback.notificationOccurred('success');
+                if (this.tg.showAlert) this.tg.showAlert(`🎉 ${result.streakDay}-րդ օրվա բոնուս՝ +${result.reward.toLocaleString()} 💰!`);
+                if (msgEl) msgEl.style.color = 'var(--text-muted)';
+            },
+
+            renderWatchAdButton() {
+                const btnEl = document.getElementById('watchAdBtn');
+                const msgEl = document.getElementById('watchAdMsg');
+                if (!btnEl || !msgEl) return;
+
+                const now = Date.now();
+                const last = this.state.lastAdRewardClaim || 0;
+                const diff = (last + this.AD_REWARD_COOLDOWN_MS) - now;
+
+                if (diff <= 0) {
+                    btnEl.disabled = false;
+                    btnEl.innerText = 'Դիտել գովազդ';
+                } else {
+                    btnEl.disabled = true;
+                    const seconds = Math.ceil(diff / 1000);
+                    btnEl.innerText = `⏳ ${seconds} վրկ`;
+                }
+            },
+
+            async watchAdForCoins() {
+                const btnEl = document.getElementById('watchAdBtn');
+                const msgEl = document.getElementById('watchAdMsg');
+                if (btnEl) btnEl.disabled = true;
+                if (msgEl) {
+                    msgEl.style.color = 'var(--text-muted)';
+                    msgEl.innerText = 'Բեռնվում է գովազդ...';
+                }
+
+                try {
+                    await showInterstitialAd();
+                } catch (e) {
+                    // реклама не показалась — ок, всё равно пробуем засчитать попытку ниже
+                }
+
+                const result = await this.callApi('claimAdReward');
+
+                if (!result.ok) {
+                    if (msgEl) {
+                        msgEl.style.color = 'var(--accent-red)';
+                        msgEl.innerText = 'Փորձեք մի փոքր ուշ:';
+                    }
+                    if (result.user) this.applyUserState(result.user);
+                    this.renderWatchAdButton();
+                    return;
+                }
+
+                this.applyUserState(result.user);
+                if (this.tg.HapticFeedback) this.tg.HapticFeedback.notificationOccurred('success');
+                if (msgEl) {
+                    msgEl.style.color = 'var(--accent-green)';
+                    msgEl.innerText = `+${result.reward.toLocaleString()} 💰 ստացվեց!`;
+                }
+                this.renderWatchAdButton();
             },
 
             async spinRoulette() {
