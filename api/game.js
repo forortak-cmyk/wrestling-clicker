@@ -38,6 +38,11 @@ const AD_REWARD_COOLDOWN_MS = 30 * 1000;
 const CHANNEL_USERNAME = '@wrestlerclicker';
 const CHANNEL_BONUS_COINS = 300000;
 
+// Бонус за шеринг реферальной карточки другу/в историю — выдаётся один раз.
+// В отличие от канала, реальный факт шеринга Telegram не даёт проверить,
+// поэтому засчитываем по клику на кнопку «Поделиться», как и с рекламой.
+const SHARE_BONUS_COINS = 300000;
+
 // Проверяем, что запрос действительно пришёл из Telegram и не подделан
 function verifyTelegramInitData(initData, botToken) {
   if (!initData || !botToken) return null;
@@ -135,7 +140,8 @@ module.exports = async function handler(req, res) {
         last_daily_claim: 0,
         daily_streak: 0,
         last_ad_reward_claim: 0,
-        channel_bonus_claimed: false
+        channel_bonus_claimed: false,
+        share_bonus_claimed: false
       }]).select().single();
       if (insertErr) throw insertErr;
       user = created;
@@ -486,6 +492,23 @@ module.exports = async function handler(req, res) {
         if (upErr) throw upErr;
 
         return res.status(200).json({ ok: true, user: updated, reward: CHANNEL_BONUS_COINS });
+      }
+
+      case 'claimShareBonus': {
+        if (user.share_bonus_claimed) {
+          return res.status(400).json({ ok: false, error: 'Already claimed', user });
+        }
+
+        const { data: updated, error: upErr } = await db.from('users')
+          .update({
+            balance: user.balance + SHARE_BONUS_COINS,
+            total_earned: user.total_earned + SHARE_BONUS_COINS,
+            share_bonus_claimed: true
+          })
+          .eq('telegram_id', telegramId).select().single();
+        if (upErr) throw upErr;
+
+        return res.status(200).json({ ok: true, user: updated, reward: SHARE_BONUS_COINS });
       }
 
       default:
