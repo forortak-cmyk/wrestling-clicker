@@ -481,6 +481,14 @@
                 <button class="action-btn success-btn" id="watchAdBtn" style="width: 100%; margin: 0; padding: 12px;" onclick="app.watchAdForCoins()">Դիտել գովազդ</button>
                 <p id="watchAdMsg" style="font-size: 11px; color: var(--text-muted); margin-top: 8px; text-align: center;"></p>
             </div>
+
+            <div class="ref-banner" style="text-align: left; padding: 16px;">
+                <h3 style="font-size: 15px; margin-bottom: 6px;">📢 Բաժանորդագրվիր մեր ալիքին</h3>
+                <p style="font-size: 12px; color: #aaa; margin-bottom: 12px;">Ստացիր <span class="ref-bonus-highlight">+300,000 💰</span> բաժանորդագրության համար (մեկանգամյա)</p>
+                <button class="action-btn" style="width: 100%; margin: 0 0 8px 0; padding: 10px;" onclick="app.openChannel()">📢 Բացել ալիքը</button>
+                <button class="action-btn success-btn" id="channelBonusBtn" style="width: 100%; margin: 0; padding: 12px;" onclick="app.claimChannelBonus()">✅ Ստուգել և ստանալ</button>
+                <p id="channelBonusMsg" style="font-size: 11px; color: var(--text-muted); margin-top: 8px; text-align: center;"></p>
+            </div>
         </div>
 
         <!-- 5. Profile View -->
@@ -682,11 +690,13 @@
                 this.state.dailyStreak = user.daily_streak || 0;
                 this.state.lastDailyClaim = Number(user.last_daily_claim) || 0;
                 this.state.lastAdRewardClaim = Number(user.last_ad_reward_claim) || 0;
+                this.state.channelBonusClaimed = !!user.channel_bonus_claimed;
 
                 document.getElementById('score').innerText = this.state.score.toLocaleString();
                 this.updateShopUI();
                 this.renderDailyBonus();
                 this.renderWatchAdButton();
+                this.renderChannelBonusButton();
             },
 
             setupEventListeners() {
@@ -1153,6 +1163,7 @@
                 clearInterval(this.bonusesTimerInterval);
                 this.renderDailyBonus();
                 this.renderWatchAdButton();
+                this.renderChannelBonusButton();
                 this.bonusesTimerInterval = setInterval(() => {
                     this.renderDailyBonus();
                     this.renderWatchAdButton();
@@ -1292,6 +1303,61 @@
                     msgEl.innerText = `+${result.reward.toLocaleString()} 💰 ստացվեց!`;
                 }
                 this.renderWatchAdButton();
+            },
+
+            openChannel() {
+                const url = 'https://t.me/wrestlerclicker';
+                if (this.tg.openTelegramLink) this.tg.openTelegramLink(url);
+                else if (this.tg.openLink) this.tg.openLink(url);
+                else window.open(url, '_blank');
+            },
+
+            renderChannelBonusButton() {
+                const btnEl = document.getElementById('channelBonusBtn');
+                if (!btnEl) return;
+
+                if (this.state.channelBonusClaimed) {
+                    btnEl.disabled = true;
+                    btnEl.innerText = '✅ Ստացված է';
+                } else {
+                    btnEl.disabled = false;
+                    btnEl.innerText = '✅ Ստուգել և ստանալ';
+                }
+            },
+
+            async claimChannelBonus() {
+                if (this.state.channelBonusClaimed) return;
+
+                const btnEl = document.getElementById('channelBonusBtn');
+                const msgEl = document.getElementById('channelBonusMsg');
+                if (btnEl) btnEl.disabled = true;
+                if (msgEl) {
+                    msgEl.style.color = 'var(--text-muted)';
+                    msgEl.innerText = 'Ստուգվում է...';
+                }
+
+                const result = await this.callApi('claimChannelBonus');
+
+                if (!result.ok) {
+                    if (msgEl) {
+                        msgEl.style.color = 'var(--accent-red)';
+                        msgEl.innerText = result.error === 'Already claimed'
+                            ? 'Դուք արդեն ստացել եք այս բոնուսը:'
+                            : 'Դուք դեռ բաժանորդագրված չեք ալիքին: Բացեք ալիքը և բաժանորդագրվեք:';
+                    }
+                    if (result.user) this.applyUserState(result.user);
+                    this.renderChannelBonusButton();
+                    return;
+                }
+
+                this.applyUserState(result.user);
+                if (this.tg.HapticFeedback) this.tg.HapticFeedback.notificationOccurred('success');
+                if (this.tg.showAlert) this.tg.showAlert(`🎉 +${result.reward.toLocaleString()} 💰 ստացվեց!`);
+                if (msgEl) {
+                    msgEl.style.color = 'var(--accent-green)';
+                    msgEl.innerText = 'Ստացված է ✅';
+                }
+                this.renderChannelBonusButton();
             },
 
             async spinRoulette() {
