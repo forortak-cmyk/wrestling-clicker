@@ -1474,29 +1474,51 @@
             // историю на самом деле (Telegram Bot API не даёт ботам доступ к Stories) —
             // поэтому бонус выдаём сразу после открытия редактора, без обмана "проверки".
             async shareApp() {
+                if (!this.tg.shareToStory) {
+                    // Desktop-клиент Telegram и старые версии не поддерживают Stories API вообще —
+                    // честно сообщаем, а не подсовываем другой сценарий
+                    if (this.tg.showAlert) this.tg.showAlert('Story-ների ստեղծումը հասանելի է միայն Telegram-ի բջջային հավելվածում (iOS/Android)։');
+                    else alert('Создание Story доступно только в мобильном приложении Telegram (iOS/Android).');
+                    return;
+                }
+
+                const btnEl = document.getElementById('shareBtn');
+                const msgEl = document.getElementById('shareBonusMsg');
+                if (btnEl) btnEl.disabled = true;
+                if (msgEl) {
+                    msgEl.style.color = 'var(--text-muted)';
+                    msgEl.innerText = 'Բեռնվում է...';
+                }
+
                 const canvas = document.getElementById('shareCardCanvas');
                 const dataUrl = canvas.toDataURL('image/png');
                 const link = this.getRefLink();
                 const text = this.buildShareText();
 
-                if (this.tg.shareToStory) {
-                    try {
-                        this.tg.shareToStory(dataUrl, {
-                            text: text,
-                            widget_link: { url: link, name: 'Խաղալ հիմա' }
-                        });
-                    } catch (e) {
-                        if (this.tg.showAlert) this.tg.showAlert('Story-ի ստեղծումը հասանելի չէ այս սարքում։ Թարմացրու Telegram-ը։');
-                        return;
+                // Telegram требует настоящую HTTPS-ссылку на картинку, поэтому
+                // сначала загружаем её на сервер и получаем публичную ссылку
+                const uploadResult = await this.callApi('uploadShareCard', { imageBase64: dataUrl });
+                if (btnEl) btnEl.disabled = false;
+
+                if (!uploadResult.ok) {
+                    if (msgEl) {
+                        msgEl.style.color = 'var(--accent-red)';
+                        msgEl.innerText = 'Չհաջողվեց բեռնել քարտը: Փորձեք կրկին:';
                     }
-                } else {
-                    // Старая версия Telegram-клиента без поддержки Stories API —
-                    // честно сообщаем, а не подсовываем другой сценарий
-                    if (this.tg.showAlert) this.tg.showAlert('Story-ի ստեղծումը հասանելի չէ քո Telegram-ի տարբերակում։ Թարմացրու հավելվածը։');
-                    else alert('Обнови Telegram до последней версии, чтобы создать Story.');
                     return;
                 }
 
+                try {
+                    this.tg.shareToStory(uploadResult.url, {
+                        text: text,
+                        widget_link: { url: link, name: 'Խաղալ հիմա' }
+                    });
+                } catch (e) {
+                    if (this.tg.showAlert) this.tg.showAlert('Story-ի ստեղծումը հասանելի չէ այս սարքում։ Թարմացրու Telegram-ը։');
+                    return;
+                }
+
+                if (msgEl) msgEl.innerText = '';
                 this.claimShareBonus();
             },
 
