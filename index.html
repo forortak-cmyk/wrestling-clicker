@@ -512,10 +512,6 @@
 
     </div>
 
-    <!-- Adsterra Native Banner — постоянно виден на любом экране приложения -->
-    <div id="container-16d914c5d5a297b7f3ef61489437b86f" style="flex-shrink: 0; width: 100%; box-sizing: border-box;"></div>
-    <script async data-cfasync="false" src="https://pl30996964.profitableratecpmnetwork.com/16d914c5d5a297b7f3ef61489437b86f/invoke.js"></script>
-
     <!-- Navigation -->
     <div class="nav-bar">
         <button class="nav-btn" onclick="app.switchView('shop', this)">
@@ -542,8 +538,7 @@
         const API_URL = '/api/game';
 
         // Явная реклама на ключевых моментах игры (100 кликов / покупка / рулетка) —
-        // Monetag. Adsterra (Popunder / Social Bar / Native Banner) работает пассивно,
-        // сама по себе — у неё нет JS-колбэка "показалась/не показалась", поэтому
+        // Monetag. Adsterra (Popunder) работает пассивно, сама по себе — у неё нет JS-колбэка "показалась/не показалась", поэтому
         // встроить её в этот триггерный вызов технически невозможно, зато она уже
         // покрывает весь остальной трафик (любой клик по странице, автономный поп-ап,
         // постоянный баннер) ещё до срабатывания этого кода.
@@ -1353,8 +1348,5 @@
         // загрузки ВСЕХ ресурсов страницы, включая рекламный SDK)
         app.init();
     </script>
-
-    <!-- Adsterra Social Bar — всплывает сам по своему расписанию -->
-    <script src="https://pl30996804.profitableratecpmnetwork.com/0a/53/e7/0a53e7cc0ef294ee293c7de1994ad5d8.js"></script>
 </body>
 </html>
