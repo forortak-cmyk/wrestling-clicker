@@ -489,17 +489,6 @@
                 <button class="action-btn success-btn" id="channelBonusBtn" style="width: 100%; margin: 0; padding: 12px;" onclick="app.claimChannelBonus()">✅ Ստուգել և ստանալ</button>
                 <p id="channelBonusMsg" style="font-size: 11px; color: var(--text-muted); margin-top: 8px; text-align: center;"></p>
             </div>
-
-            <div class="ref-banner" style="text-align: left; padding: 16px;">
-                <h3 style="font-size: 15px; margin-bottom: 6px;">📖 Ավելացրու Story-ում</h3>
-                <p style="font-size: 12px; color: #aaa; margin-bottom: 12px;">Ստացիր <span class="ref-bonus-highlight">+300,000 💰</span> հրավերի քարտը Story-ում տեղադրելու համար (մեկանգամյա)</p>
-
-                <canvas id="shareCardCanvas" width="640" height="360" style="width: 100%; max-width: 400px; border-radius: 14px; display: block; margin: 0 auto 12px; border: 1px solid var(--border-color);"></canvas>
-
-                <button class="action-btn success-btn" id="shareBtn" style="width: 100%; margin: 0 0 8px 0; padding: 12px;" onclick="app.shareApp()">📖 Ավելացնել Story-ում</button>
-                <button class="action-btn" id="downloadShareCardBtn" style="width: 100%; margin: 0; padding: 10px;" onclick="app.downloadShareCard()">⬇️ Ներբեռնել քարտը</button>
-                <p id="shareBonusMsg" style="font-size: 11px; color: var(--text-muted); margin-top: 8px; text-align: center;"></p>
-            </div>
         </div>
 
         <!-- 5. Profile View -->
@@ -545,9 +534,6 @@
 
     <script>
         const API_URL = '/api/game';
-        // Юзернейм бота без @ — нужен для генерации реферальной ссылки на приложение.
-        // ЗАМЕНИ на реальный юзернейм своего бота перед публикацией!
-        const BOT_USERNAME = 'Wrestler_clicker_bot';
 
         // Adexium — инициализируем виджет с несколькими попытками (на случай, если
         // рекламный скрипт ещё не успел загрузиться к моменту выполнения этого кода).
@@ -670,37 +656,9 @@
 
                 this.loadUserData().then(() => {
                     this.checkRouletteTimer();
-                    this.applyStartParamReferrer();
                 });
 
                 this.setupEventListeners();
-            },
-
-            // Если друг перешёл по реферальной ссылке (startapp=ref_<ID>),
-            // автоматически подставляем ID пригласившего — без ручного ввода
-            async applyStartParamReferrer() {
-                if (this.state.myReferrerId) return;
-
-                const startParam = this.tg.initDataUnsafe?.start_param || '';
-                const match = /^ref_(\d+)$/.exec(startParam);
-                if (!match) return;
-
-                const refIdInput = parseInt(match[1], 10);
-                if (!refIdInput || refIdInput === this.state.userId) return;
-
-                const result = await this.callApi('setReferrer', { referrerId: refIdInput });
-                if (!result.ok) return;
-
-                this.applyUserState(result.user);
-                document.getElementById('manualRefBlock').style.display = 'none';
-                if (this.tg.HapticFeedback) this.tg.HapticFeedback.notificationOccurred('success');
-                if (this.tg.showAlert) this.tg.showAlert("✅ Դուք միացաք հրավերով: Ձեզ շնորհվեց +5,000 💰 բոնուս:");
-            },
-
-            // Реферальная ссылка приложения с твоим ID в startapp —
-            // друг перейдёт по ней и автоматически станет твоим рефералом
-            getRefLink() {
-                return `https://t.me/${BOT_USERNAME}?startapp=ref_${this.state.userId}`;
             },
 
             // Все запросы к серверу подписываются данными Telegram — сервер сам
@@ -733,14 +691,12 @@
                 this.state.lastDailyClaim = Number(user.last_daily_claim) || 0;
                 this.state.lastAdRewardClaim = Number(user.last_ad_reward_claim) || 0;
                 this.state.channelBonusClaimed = !!user.channel_bonus_claimed;
-                this.state.shareBonusClaimed = !!user.share_bonus_claimed;
 
                 document.getElementById('score').innerText = this.state.score.toLocaleString();
                 this.updateShopUI();
                 this.renderDailyBonus();
                 this.renderWatchAdButton();
                 this.renderChannelBonusButton();
-                this.renderShareBonusButton();
             },
 
             setupEventListeners() {
@@ -801,7 +757,7 @@
                 if (viewName === 'business') this.loadWithdrawalHistory();
                 if (viewName === 'profile') this.updateProfileUI();
                 if (viewName === 'main') this.checkRouletteTimer();
-                if (viewName === 'bonuses') { this.startBonusesTimer(); this.drawShareCard(); }
+                if (viewName === 'bonuses') this.startBonusesTimer();
 
                 if (this.tg.HapticFeedback) this.tg.HapticFeedback.selectionChanged();
             },
@@ -1402,160 +1358,6 @@
                     msgEl.innerText = 'Ստացված է ✅';
                 }
                 this.renderChannelBonusButton();
-            },
-
-            // Рисует красивую карточку для шеринга: логотип игры, монета,
-            // реферальная ссылка и сочный призыв присоединиться.
-            drawShareCard() {
-                const canvas = document.getElementById('shareCardCanvas');
-                if (!canvas) return;
-                const ctx = canvas.getContext('2d');
-                const W = canvas.width, H = canvas.height;
-
-                // Фон с градиентом в стиле приложения
-                const bg = ctx.createLinearGradient(0, 0, W, H);
-                bg.addColorStop(0, '#1c1c1e');
-                bg.addColorStop(1, '#0d0d0e');
-                ctx.fillStyle = bg;
-                ctx.fillRect(0, 0, W, H);
-
-                // Декоративное свечение
-                const glow = ctx.createRadialGradient(W / 2, 130, 20, W / 2, 130, 260);
-                glow.addColorStop(0, 'rgba(10,132,255,0.25)');
-                glow.addColorStop(1, 'rgba(10,132,255,0)');
-                ctx.fillStyle = glow;
-                ctx.fillRect(0, 0, W, H);
-
-                // Монета
-                const coinGrad = ctx.createRadialGradient(W / 2 - 20, 100, 10, W / 2, 120, 70);
-                coinGrad.addColorStop(0, '#ffe066');
-                coinGrad.addColorStop(0.7, '#e6a100');
-                coinGrad.addColorStop(1, '#996b00');
-                ctx.beginPath();
-                ctx.arc(W / 2, 120, 62, 0, Math.PI * 2);
-                ctx.fillStyle = coinGrad;
-                ctx.fill();
-
-                // Заголовок
-                ctx.textAlign = 'center';
-                ctx.fillStyle = '#ffffff';
-                ctx.font = '900 34px -apple-system, sans-serif';
-                ctx.fillText('WRESTLING CLICKER', W / 2, 225);
-
-                ctx.fillStyle = '#ffd700';
-                ctx.font = '700 22px -apple-system, sans-serif';
-                ctx.fillText('Միացիր հիմա և ստացիր 💰', W / 2, 262);
-
-                ctx.fillStyle = '#8e8e93';
-                ctx.font = '600 16px -apple-system, sans-serif';
-                ctx.fillText(`Հրավիրողի ID՝ ${this.state.userId}`, W / 2, 292);
-
-                // Плашка со ссылкой
-                const linkText = this.getRefLink().replace('https://', '');
-                ctx.fillStyle = '#2c2c2e';
-                const boxW = 560, boxH = 42;
-                const boxX = (W - boxW) / 2, boxY = 310;
-                ctx.beginPath();
-                ctx.roundRect ? ctx.roundRect(boxX, boxY, boxW, boxH, 10) : ctx.rect(boxX, boxY, boxW, boxH);
-                ctx.fill();
-                ctx.fillStyle = '#0a84ff';
-                ctx.font = '600 15px -apple-system, sans-serif';
-                ctx.fillText(linkText, W / 2, boxY + 27);
-            },
-
-            // Готовый виджет-подпись для кнопки в самой Story (ведёт в приложение)
-            buildShareText() {
-                return `🤼 WRESTLING CLICKER — միացիր և ստացիր բոնուս 💰`;
-            },
-
-            // Открывает экран создания Telegram Story сразу с готовой картинкой
-            // и кликабельной ссылкой на приложение поверх неё.
-            // ВАЖНО: бот технически не может проверить, опубликовал ли пользователь
-            // историю на самом деле (Telegram Bot API не даёт ботам доступ к Stories) —
-            // поэтому бонус выдаём сразу после открытия редактора, без обмана "проверки".
-            async shareApp() {
-                if (!this.tg.shareToStory) {
-                    // Desktop-клиент Telegram и старые версии не поддерживают Stories API вообще —
-                    // честно сообщаем, а не подсовываем другой сценарий
-                    if (this.tg.showAlert) this.tg.showAlert('Story-ների ստեղծումը հասանելի է միայն Telegram-ի բջջային հավելվածում (iOS/Android)։');
-                    else alert('Создание Story доступно только в мобильном приложении Telegram (iOS/Android).');
-                    return;
-                }
-
-                const btnEl = document.getElementById('shareBtn');
-                const msgEl = document.getElementById('shareBonusMsg');
-                if (btnEl) btnEl.disabled = true;
-                if (msgEl) {
-                    msgEl.style.color = 'var(--text-muted)';
-                    msgEl.innerText = 'Բեռնվում է...';
-                }
-
-                const canvas = document.getElementById('shareCardCanvas');
-                const dataUrl = canvas.toDataURL('image/png');
-                const link = this.getRefLink();
-                const text = this.buildShareText();
-
-                // Telegram требует настоящую HTTPS-ссылку на картинку, поэтому
-                // сначала загружаем её на сервер и получаем публичную ссылку
-                const uploadResult = await this.callApi('uploadShareCard', { imageBase64: dataUrl });
-                if (btnEl) btnEl.disabled = false;
-
-                if (!uploadResult.ok) {
-                    if (msgEl) {
-                        msgEl.style.color = 'var(--accent-red)';
-                        msgEl.innerText = 'Չհաջողվեց բեռնել քարտը: Փորձեք կրկին:';
-                    }
-                    return;
-                }
-
-                try {
-                    this.tg.shareToStory(uploadResult.url, {
-                        text: text,
-                        widget_link: { url: link, name: 'Խաղալ հիմա' }
-                    });
-                } catch (e) {
-                    if (this.tg.showAlert) this.tg.showAlert('Story-ի ստեղծումը հասանելի չէ այս սարքում։ Թարմացրու Telegram-ը։');
-                    return;
-                }
-
-                if (msgEl) msgEl.innerText = '';
-                this.claimShareBonus();
-            },
-
-            downloadShareCard() {
-                const canvas = document.getElementById('shareCardCanvas');
-                if (!canvas) return;
-                const link = document.createElement('a');
-                link.download = 'wrestling-clicker-invite.png';
-                link.href = canvas.toDataURL('image/png');
-                link.click();
-            },
-
-            renderShareBonusButton() {
-                const shareBtn = document.getElementById('shareBtn');
-                const msgEl = document.getElementById('shareBonusMsg');
-                if (!shareBtn) return;
-
-                if (this.state.shareBonusClaimed) {
-                    if (msgEl) {
-                        msgEl.style.color = 'var(--accent-green)';
-                        msgEl.innerText = 'Բոնուսը ստացված է ✅ (կարող ես կիսվել կրկին)';
-                    }
-                } else if (msgEl) {
-                    msgEl.style.color = 'var(--text-muted)';
-                    msgEl.innerText = '';
-                }
-            },
-
-            async claimShareBonus() {
-                if (this.state.shareBonusClaimed) return;
-
-                const result = await this.callApi('claimShareBonus');
-                if (!result.ok) return;
-
-                this.applyUserState(result.user);
-                if (this.tg.HapticFeedback) this.tg.HapticFeedback.notificationOccurred('success');
-                if (this.tg.showAlert) this.tg.showAlert(`🎉 +${result.reward.toLocaleString()} 💰 ստացվեց կիսվելու համար!`);
             },
 
             async spinRoulette() {
