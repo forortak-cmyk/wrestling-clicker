@@ -8,7 +8,7 @@ const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 const MAX_POWER = 750;
 const SHOP_ITEMS = {
-  1: { powerAdd: 1, costMultiplier: 600 }
+  1: { powerAdd: 1, costMultiplier: 500 }
 };
 const REF_FLAT_BONUS = 10000;
 const REF_PERCENT = 0.1;
@@ -21,6 +21,17 @@ const REFERRER_BONUS = 5000;
 const WITHDRAWAL_RATE_COINS = 250000000;
 const WITHDRAWAL_RATE_AMD = 750;
 const MIN_WITHDRAWAL_COINS = 250000000;
+
+// Ежедневный бонус за вход: 7 дней подряд, растёт на 20,000 в день.
+// Пропуск дня (>48ч без захода) обнуляет прогресс до 1-го дня.
+const DAILY_BONUS_REWARDS = [10000, 30000, 50000, 70000, 90000, 110000, 130000];
+const DAILY_BONUS_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+const DAILY_BONUS_RESET_MS = 48 * 60 * 60 * 1000;
+
+// Бонус за просмотр рекламы — не чаще раза в 30 секунд (защита от спама кнопкой,
+// точная проверка реального просмотра рекламы недоступна на клиенте)
+const AD_REWARD_COINS = 30000;
+const AD_REWARD_COOLDOWN_MS = 30 * 1000;
 
 // Проверяем, что запрос действительно пришёл из Telegram и не подделан
 function verifyTelegramInitData(initData, botToken) {
@@ -115,7 +126,10 @@ module.exports = async function handler(req, res) {
         ref_claimed: 0,
         last_spin: 0,
         vouchers: [],
-        last_sync: Date.now()
+        last_sync: Date.now(),
+        last_daily_claim: 0,
+        daily_streak: 0,
+        last_ad_reward_claim: 0
       }]).select().single();
       if (insertErr) throw insertErr;
       user = created;
@@ -376,6 +390,57 @@ module.exports = async function handler(req, res) {
         if (wErr) throw wErr;
 
         return res.status(200).json({ ok: true, withdrawals: withdrawals || [] });
+      }
+
+      case 'claimDailyBonus': {
+        const now = Date.now();
+        const lastClaim = Number(user.last_daily_claim) || 0;
+        const elapsed = lastClaim ? now - lastClaim : Infinity;
+
+        if (lastClaim && elapsed < DAILY_BONUS_COOLDOWN_MS) {
+          return res.status(400).json({ ok: false, error: 'Too soon', user });
+        }
+
+        let newStreak;
+        if (!lastClaim || elapsed >= DAILY_BONUS_RESET_MS) {
+          newStreak = 1; // первый заход или пропустил день — начинаем заново
+        } else {
+          newStreak = ((user.daily_streak || 0) % 7) + 1; // 7 → снова 1
+        }
+
+        const reward = DAILY_BONUS_REWARDS[newStreak - 1];
+
+        const { data: updated, error: upErr } = await db.from('users')
+          .update({
+            balance: user.balance + reward,
+            total_earned: user.total_earned + reward,
+            last_daily_claim: now,
+            daily_streak: newStreak
+          })
+          .eq('telegram_id', telegramId).select().single();
+        if (upErr) throw upErr;
+
+        return res.status(200).json({ ok: true, user: updated, reward, streakDay: newStreak });
+      }
+
+      case 'claimAdReward': {
+        const now = Date.now();
+        const lastClaim = Number(user.last_ad_reward_claim) || 0;
+
+        if (now - lastClaim < AD_REWARD_COOLDOWN_MS) {
+          return res.status(400).json({ ok: false, error: 'Cooldown active', user });
+        }
+
+        const { data: updated, error: upErr } = await db.from('users')
+          .update({
+            balance: user.balance + AD_REWARD_COINS,
+            total_earned: user.total_earned + AD_REWARD_COINS,
+            last_ad_reward_claim: now
+          })
+          .eq('telegram_id', telegramId).select().single();
+        if (upErr) throw upErr;
+
+        return res.status(200).json({ ok: true, user: updated, reward: AD_REWARD_COINS });
       }
 
       default:
