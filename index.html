@@ -491,12 +491,12 @@
             </div>
 
             <div class="ref-banner" style="text-align: left; padding: 16px;">
-                <h3 style="font-size: 15px; margin-bottom: 6px;">📤 Կիսվիր ընկերոջդ հետ</h3>
-                <p style="font-size: 12px; color: #aaa; margin-bottom: 12px;">Ստացիր <span class="ref-bonus-highlight">+300,000 💰</span> քո հրավերի քարտը կիսելու համար (մեկանգամյա)</p>
+                <h3 style="font-size: 15px; margin-bottom: 6px;">📖 Ավելացրու Story-ում</h3>
+                <p style="font-size: 12px; color: #aaa; margin-bottom: 12px;">Ստացիր <span class="ref-bonus-highlight">+300,000 💰</span> հրավերի քարտը Story-ում տեղադրելու համար (մեկանգամյա)</p>
 
                 <canvas id="shareCardCanvas" width="640" height="360" style="width: 100%; max-width: 400px; border-radius: 14px; display: block; margin: 0 auto 12px; border: 1px solid var(--border-color);"></canvas>
 
-                <button class="action-btn success-btn" id="shareBtn" style="width: 100%; margin: 0 0 8px 0; padding: 12px;" onclick="app.shareApp()">📤 Կիսվել / փոխանցել ընկերոջ</button>
+                <button class="action-btn success-btn" id="shareBtn" style="width: 100%; margin: 0 0 8px 0; padding: 12px;" onclick="app.shareApp()">📖 Ավելացնել Story-ում</button>
                 <button class="action-btn" id="downloadShareCardBtn" style="width: 100%; margin: 0; padding: 10px;" onclick="app.downloadShareCard()">⬇️ Ներբեռնել քարտը</button>
                 <p id="shareBonusMsg" style="font-size: 11px; color: var(--text-muted); margin-top: 8px; text-align: center;"></p>
             </div>
@@ -1463,37 +1463,38 @@
                 ctx.fillText(linkText, W / 2, boxY + 27);
             },
 
-            // Готовый "сочный" текст для пересылки другу
+            // Готовый виджет-подпись для кнопки в самой Story (ведёт в приложение)
             buildShareText() {
-                return `🤼 WRESTLING CLICKER — կտտացրու ու վաստակի՛ր իրական գումար! 💰\n\nՄիացիր իմ հրավերով և ստացիր բոնուս հենց մուտքից 🎁`;
+                return `🤼 WRESTLING CLICKER — միացիր և ստացիր բոնուս 💰`;
             },
 
-            // Открывает шаринг: сначала пробуем нативный Telegram Story
-            // (если поддерживается клиентом), иначе — стандартное окно
-            // "переслать другу/в чат" с готовой ссылкой и текстом.
+            // Открывает экран создания Telegram Story сразу с готовой картинкой
+            // и кликабельной ссылкой на приложение поверх неё.
+            // ВАЖНО: бот технически не может проверить, опубликовал ли пользователь
+            // историю на самом деле (Telegram Bot API не даёт ботам доступ к Stories) —
+            // поэтому бонус выдаём сразу после открытия редактора, без обмана "проверки".
             async shareApp() {
+                const canvas = document.getElementById('shareCardCanvas');
+                const dataUrl = canvas.toDataURL('image/png');
                 const link = this.getRefLink();
                 const text = this.buildShareText();
 
-                try {
-                    if (this.tg.shareToStory) {
-                        const canvas = document.getElementById('shareCardCanvas');
-                        const dataUrl = canvas.toDataURL('image/png');
+                if (this.tg.shareToStory) {
+                    try {
                         this.tg.shareToStory(dataUrl, {
                             text: text,
                             widget_link: { url: link, name: 'Խաղալ հիմա' }
                         });
-                    } else if (this.tg.openTelegramLink) {
-                        this.tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`);
-                    } else {
-                        window.open(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`, '_blank');
+                    } catch (e) {
+                        if (this.tg.showAlert) this.tg.showAlert('Story-ի ստեղծումը հասանելի չէ այս սարքում։ Թարմացրու Telegram-ը։');
+                        return;
                     }
-                } catch (e) {
-                    // shareToStory может кинуть ошибку на старых версиях клиента —
-                    // подстраховываемся обычным окном "переслать"
-                    if (this.tg.openTelegramLink) {
-                        this.tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`);
-                    }
+                } else {
+                    // Старая версия Telegram-клиента без поддержки Stories API —
+                    // честно сообщаем, а не подсовываем другой сценарий
+                    if (this.tg.showAlert) this.tg.showAlert('Story-ի ստեղծումը հասանելի չէ քո Telegram-ի տարբերակում։ Թարմացրու հավելվածը։');
+                    else alert('Обнови Telegram до последней версии, чтобы создать Story.');
+                    return;
                 }
 
                 this.claimShareBonus();
