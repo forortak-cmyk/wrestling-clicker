@@ -127,6 +127,7 @@ module.exports = async function handler(req, res) {
         balance: 0,
         total_earned: 0,
         click_power: 1,
+        xp: 0,
         referrer_id: null,
         ref_claimed: 0,
         last_spin: 0,
@@ -162,9 +163,10 @@ module.exports = async function handler(req, res) {
         const earned = validClicks * (user.click_power || 1);
         const newBalance = (user.balance || 0) + earned;
         const newTotal = (user.total_earned || 0) + earned;
+        const newXp = (user.xp || 0) + validClicks;
 
         const { data: updated, error: upErr } = await db.from('users')
-          .update({ balance: newBalance, total_earned: newTotal, last_sync: now })
+          .update({ balance: newBalance, total_earned: newTotal, xp: newXp, last_sync: now })
           .eq('telegram_id', telegramId).select().single();
         if (upErr) throw upErr;
 
