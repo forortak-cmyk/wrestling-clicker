@@ -111,7 +111,7 @@
         .coin {
             width: 200px;
             height: 200px;
-            background: radial-gradient(circle at 30% 30%, #ffe066, #e6a100 70%, #996b00);
+            background: transparent;
             border-radius: 50%;
             display: flex;
             flex-direction: column;
@@ -120,13 +120,51 @@
             font-size: 26px;
             font-weight: 900;
             color: #3d2b00;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.6), inset 0 5px 10px rgba(255,255,255,0.4);
+            box-shadow: 0 10px 30px rgba(255, 215, 0, 0.35);
             cursor: pointer;
             transition: transform 0.05s ease-out;
             -webkit-tap-highlight-color: transparent;
+            overflow: hidden;
+        }
+        .coin img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            pointer-events: none;
+            user-select: none;
+            -webkit-user-drag: none;
         }
         .coin:active { transform: scale(0.92); }
         .coin-sub { font-size: 12px; font-weight: bold; margin-top: 5px; opacity: 0.8; }
+
+        .level-badge {
+            font-size: 15px;
+            font-weight: 800;
+            color: var(--accent-gold);
+            margin-bottom: 8px;
+            text-align: center;
+        }
+        .xp-bar-container {
+            width: 200px;
+            height: 10px;
+            background: var(--bg-header);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        .xp-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ffd700, #ff9d00);
+            border-radius: 6px 0 0 6px;
+            transition: width 0.3s ease-out;
+            width: 0%;
+        }
+        .xp-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
 
         /* Shared Components */
         .list-container { width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 10px; padding-bottom: 20px; }
@@ -417,10 +455,15 @@
             </div>
 
             <div class="clicker-wrapper">
+                <div class="level-badge" id="levelBadge">Մակարդակ 1 · Մանկություն</div>
                 <div class="coin" id="coinBtn">
-                    <span>ՍԵՂՄԵՔ</span>
-                    <span class="coin-sub" id="powerLabel">+1 մեկ սեղմման համար</span>
+                    <img id="characterImg" src="stage1-childhood.png" alt="character">
                 </div>
+                <span class="coin-sub" id="powerLabel">+1 մեկ սեղմման համար</span>
+                <div class="xp-bar-container">
+                    <div class="xp-bar-fill" id="xpBarFill"></div>
+                </div>
+                <div class="xp-label" id="xpLabel">0 / 50 XP</div>
             </div>
 
             <div class="roulette-container">
@@ -612,6 +655,37 @@
             return div.innerHTML;
         }
 
+        // === Система уровней персонажа ===
+        // 1 XP = 1 клик (не зависит от силы удара). Стоимость каждого следующего
+        // уровня растёт линейно, чтобы 100-й уровень достигался за несколько недель
+        // активной игры, а не за пару часов и не за полгода.
+        const MAX_LEVEL = 100;
+        function xpRequiredForLevel(level) {
+            return 20 * level + 30;
+        }
+        function getLevelInfo(totalXp) {
+            let level = 1;
+            let xpIntoLevel = Math.max(0, totalXp || 0);
+            while (level < MAX_LEVEL) {
+                const need = xpRequiredForLevel(level);
+                if (xpIntoLevel < need) break;
+                xpIntoLevel -= need;
+                level += 1;
+            }
+            const needForNext = level < MAX_LEVEL ? xpRequiredForLevel(level) : 0;
+            return { level, xpIntoLevel, needForNext };
+        }
+        const CHARACTER_STAGES = [
+            { maxLevel: 20, file: 'stage1-childhood.png', name: 'Մանկություն' },
+            { maxLevel: 40, file: 'stage2-teen.png', name: 'Դեռահաս' },
+            { maxLevel: 60, file: 'stage3-youth.png', name: 'Երիտասարդություն' },
+            { maxLevel: 80, file: 'stage4-adult.png', name: 'Հասունություն' },
+            { maxLevel: 100, file: 'stage5-champion.png', name: 'Չեմպիոն' }
+        ];
+        function getCharacterStage(level) {
+            return CHARACTER_STAGES.find(s => level <= s.maxLevel) || CHARACTER_STAGES[CHARACTER_STAGES.length - 1];
+        }
+
         const app = {
             tg: window.Telegram.WebApp,
             state: {
@@ -620,6 +694,7 @@
                 score: 0,
                 totalEarned: 0,
                 clickPower: 1,
+                xp: 0,
                 refClaimed: 0,
                 availableRefBonus: 0,
                 myReferrerId: null,
@@ -682,6 +757,7 @@
                 this.state.score = user.balance || 0;
                 this.state.totalEarned = user.total_earned || 0;
                 this.state.clickPower = user.click_power || 1;
+                this.state.xp = user.xp || 0;
                 this.state.refClaimed = user.ref_claimed || 0;
                 this.state.myReferrerId = user.referrer_id || null;
                 this.state.lastSpinTime = Number(user.last_spin) || 0;
@@ -694,9 +770,39 @@
 
                 document.getElementById('score').innerText = this.state.score.toLocaleString();
                 this.updateShopUI();
+                this.updateCharacterUI();
                 this.renderDailyBonus();
                 this.renderWatchAdButton();
                 this.renderChannelBonusButton();
+            },
+
+            updateCharacterUI() {
+                const { level, xpIntoLevel, needForNext } = getLevelInfo(this.state.xp);
+                const stage = getCharacterStage(level);
+                const isMaxLevel = level >= MAX_LEVEL;
+
+                const imgEl = document.getElementById('characterImg');
+                if (imgEl && imgEl.getAttribute('src') !== stage.file) {
+                    imgEl.setAttribute('src', stage.file);
+                }
+
+                document.getElementById('levelBadge').innerText = `Մակարդակ ${level} · ${stage.name}`;
+
+                const pct = isMaxLevel ? 100 : Math.min(100, Math.round((xpIntoLevel / needForNext) * 100));
+                document.getElementById('xpBarFill').style.width = pct + '%';
+                document.getElementById('xpLabel').innerText = isMaxLevel
+                    ? 'ԱՌԱՎԵԼԱԳՈՒՅՆ ՄԱԿԱՐԴԱԿ'
+                    : `${xpIntoLevel.toLocaleString()} / ${needForNext.toLocaleString()} XP`;
+
+                // Празднуем переход на новый уровень / новую стадию
+                if (this._lastLevel !== undefined && level > this._lastLevel) {
+                    if (this.tg.HapticFeedback) this.tg.HapticFeedback.notificationOccurred('success');
+                    if (this._lastStageFile && this._lastStageFile !== stage.file && this.tg.showAlert) {
+                        this.tg.showAlert(`🎉 Նոր փուլ. ${stage.name}!`);
+                    }
+                }
+                this._lastLevel = level;
+                this._lastStageFile = stage.file;
             },
 
             setupEventListeners() {
@@ -705,7 +811,9 @@
                     // Сервер потом сам всё пересчитает и подтвердит.
                     this.state.score += this.state.clickPower;
                     this.state.totalEarned += this.state.clickPower;
+                    this.state.xp = (this.state.xp || 0) + 1;
                     document.getElementById('score').innerText = this.state.score.toLocaleString();
+                    this.updateCharacterUI();
 
                     this.pendingClicks += 1;
                     if (this.tg.HapticFeedback) this.tg.HapticFeedback.impactOccurred('light');
