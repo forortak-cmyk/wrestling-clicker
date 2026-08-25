@@ -190,6 +190,7 @@ module.exports = async function handler(req, res) {
 
         const syncedBalance = (user.balance || 0) + clickEarned;
         const syncedTotal = (user.total_earned || 0) + clickEarned;
+        const syncedXp = (user.xp || 0) + validClicks;
 
         if (user.click_power + item.powerAdd > MAX_POWER) {
           return res.status(400).json({ ok: false, error: 'Max power reached', user });
@@ -203,6 +204,7 @@ module.exports = async function handler(req, res) {
           .update({
             balance: syncedBalance - cost,
             total_earned: syncedTotal,
+            xp: syncedXp,
             click_power: user.click_power + item.powerAdd,
             last_sync: now
           })
@@ -332,6 +334,7 @@ module.exports = async function handler(req, res) {
 
         const syncedBalance = (user.balance || 0) + clickEarned;
         const syncedTotal = (user.total_earned || 0) + clickEarned;
+        const syncedXp = (user.xp || 0) + validClicks;
 
         if (coins < MIN_WITHDRAWAL_COINS) {
           return res.status(400).json({ ok: false, error: 'Below minimum', user });
@@ -363,7 +366,7 @@ module.exports = async function handler(req, res) {
         if (insErr) throw insErr;
 
         const { data: updated, error: upErr } = await db.from('users')
-          .update({ balance: syncedBalance - coins, total_earned: syncedTotal, last_sync: now })
+          .update({ balance: syncedBalance - coins, total_earned: syncedTotal, xp: syncedXp, last_sync: now })
           .eq('telegram_id', telegramId)
           .gte('balance', coins - clickEarned) // атомарная защита от двух одновременных заявок
           .select().single();
