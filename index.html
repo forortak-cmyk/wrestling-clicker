@@ -166,30 +166,6 @@
             margin-top: 4px;
         }
 
-        .biz-summary {
-            width: 100%;
-            max-width: 400px;
-            background: linear-gradient(135deg, var(--bg-header) 0%, var(--border-color) 100%);
-            border: 1px solid #3a3a3c;
-            border-radius: 16px;
-            padding: 16px;
-            margin-bottom: 15px;
-            text-align: left;
-        }
-        .biz-collect-btn {
-            width: 100%;
-            margin-top: 10px;
-            padding: 12px;
-            background: var(--accent-green);
-            color: #fff;
-            border: none;
-            border-radius: 10px;
-            font-weight: bold;
-            font-size: 14px;
-            cursor: pointer;
-        }
-        .biz-collect-btn:disabled { background: #3a3a3c; color: var(--text-muted); cursor: not-allowed; }
-
         /* Shared Components */
         .list-container { width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 10px; padding-bottom: 20px; }
 
@@ -531,16 +507,6 @@
             </div>
         </div>
 
-        <!-- Businesses View -->
-        <div id="businesses-view" class="view">
-            <h2 style="margin-bottom: 15px; font-size: 18px;">🏢 Բիզնեսներ</h2>
-
-            <div class="biz-summary" id="businessIncomeSummary">Բեռնվում է...</div>
-            <button class="biz-collect-btn" id="collectBusinessBtn" onclick="app.collectBusinessIncome()" disabled>Հավաքել եկամուտը</button>
-
-            <div class="list-container" style="margin-top: 15px;" id="businessesList">Բեռնվում է...</div>
-        </div>
-
         <!-- 5. Bonuses View -->
         <div id="bonuses-view" class="view">
             <h2 style="margin-bottom: 15px; font-size: 18px;">🎁 Բոնուսներ</h2>
@@ -594,9 +560,6 @@
         </button>
         <button class="nav-btn" onclick="app.switchView('referrals', this)">
             <span class="icon">👥</span><span>Ընկերներ</span>
-        </button>
-        <button class="nav-btn" onclick="app.switchView('businesses', this)">
-            <span class="icon">🏢</span><span>Բիզնեսներ</span>
         </button>
         <button class="nav-btn active" onclick="app.switchView('main', this)">
             <span class="icon">🪙</span><span>Գլխավոր</span>
@@ -723,19 +686,6 @@
             return CHARACTER_STAGES.find(s => level <= s.maxLevel) || CHARACTER_STAGES[CHARACTER_STAGES.length - 1];
         }
 
-        // === Бизнесы ===
-        // Должны совпадать по id/цене/доходу с BUSINESS_DEFS на сервере (game.js) —
-        // здесь эти цифры используются только для отображения, реальный расчёт
-        // и списание всегда проверяются на сервере.
-        const BUSINESS_DEFS = [
-            { id: 'gym',    name: 'Մարզասրահ',                  icon: '🥊', baseCost: 5000000,    incomePerHour: 8000 },
-            { id: 'arena',  name: 'Ասպարեզ',                     icon: '🏟️', baseCost: 25000000,   incomePerHour: 45000 },
-            { id: 'tv',     name: 'Հեռուստաալիք',                icon: '📺', baseCost: 120000000,  incomePerHour: 220000 },
-            { id: 'agency', name: 'Գովազդային գործակալություն',  icon: '🏢', baseCost: 600000000,  incomePerHour: 1200000 },
-            { id: 'league', name: 'Չեմպիոնության լիգա',          icon: '👑', baseCost: 3000000000, incomePerHour: 6500000 }
-        ];
-        const MAX_OFFLINE_BUSINESS_MS = 3 * 60 * 60 * 1000; // жёсткий лимит — 3 часа офлайн-дохода
-
         const app = {
             tg: window.Telegram.WebApp,
             state: {
@@ -753,9 +703,7 @@
                 lastSpinTime: 0,
                 dailyStreak: 0,
                 lastDailyClaim: 0,
-                lastAdRewardClaim: 0,
-                businesses: {},
-                lastBusinessCollect: 0
+                lastAdRewardClaim: 0
             },
             pendingClicks: 0,
             clicksSinceLastAd: 0,
@@ -786,10 +734,6 @@
                 });
 
                 this.setupEventListeners();
-
-                // Обновляем отображение накопленного дохода бизнесов раз в 5 секунд —
-                // renderBusinesses() сама ничего не делает, если вкладка не открыта
-                setInterval(() => this.renderBusinesses(), 5000);
             },
 
             // Все запросы к серверу подписываются данными Telegram — сервер сам
@@ -823,8 +767,6 @@
                 this.state.lastDailyClaim = Number(user.last_daily_claim) || 0;
                 this.state.lastAdRewardClaim = Number(user.last_ad_reward_claim) || 0;
                 this.state.channelBonusClaimed = !!user.channel_bonus_claimed;
-                this.state.businesses = user.businesses || {};
-                this.state.lastBusinessCollect = Number(user.last_business_collect) || Date.now();
 
                 document.getElementById('score').innerText = this.state.score.toLocaleString();
                 this.updateShopUI();
@@ -832,7 +774,6 @@
                 this.renderDailyBonus();
                 this.renderWatchAdButton();
                 this.renderChannelBonusButton();
-                this.renderBusinesses();
             },
 
             updateCharacterUI() {
@@ -864,94 +805,7 @@
                 this._lastStageFile = stage.file;
             },
 
-            // === Бизнесы ===
-            getBusinessHourlyRate() {
-                let rate = 0;
-                for (const def of BUSINESS_DEFS) {
-                    const level = this.state.businesses[def.id] || 0;
-                    rate += def.incomePerHour * level;
-                }
-                return rate;
-            },
-
-            getPendingBusinessIncome() {
-                const rate = this.getBusinessHourlyRate();
-                if (rate <= 0) return 0;
-                const elapsed = Math.max(0, Date.now() - (this.state.lastBusinessCollect || Date.now()));
-                const capped = Math.min(elapsed, MAX_OFFLINE_BUSINESS_MS);
-                return Math.floor(rate * capped / 3600000);
-            },
-
-            renderBusinesses() {
-                const listEl = document.getElementById('businessesList');
-                const summaryEl = document.getElementById('businessIncomeSummary');
-                const collectBtn = document.getElementById('collectBusinessBtn');
-                if (!listEl || !summaryEl) return; // вкладка ещё не открывалась
-
-                const totalRate = this.getBusinessHourlyRate();
-                const pending = this.getPendingBusinessIncome();
-                const maxPossible = Math.floor(totalRate * MAX_OFFLINE_BUSINESS_MS / 3600000);
-                const isCapped = totalRate > 0 && pending >= maxPossible;
-
-                summaryEl.innerHTML = `
-                    <p style="font-size:13px; margin-bottom:6px;">Ընդհանուր եկամուտ՝ <span class="ref-bonus-highlight">${totalRate.toLocaleString()} 💰/ժ</span></p>
-                    <p style="font-size:12px; color:#aaa;">Կուտակված (առավելագույնը 3ժ)՝ <span style="color:var(--accent-gold); font-weight:bold;">${pending.toLocaleString()} 💰</span>${isCapped ? ' — առավելագույնը լցված է' : ''}</p>
-                `;
-
-                if (collectBtn) collectBtn.disabled = pending <= 0;
-
-                listEl.innerHTML = BUSINESS_DEFS.map(def => {
-                    const level = this.state.businesses[def.id] || 0;
-                    const cost = def.baseCost * (level + 1);
-                    const canAfford = this.state.score >= cost;
-                    return `
-                        <div class="card-item">
-                            <div class="card-info">
-                                <h3>${def.icon} ${def.name}</h3>
-                                <p>Մակարդակ՝ ${level} · Եկամուտ՝ ${(def.incomePerHour * level).toLocaleString()} 💰/ժ</p>
-                                <p class="cost">Հաջորդի գինը՝ ${cost.toLocaleString()} 💰</p>
-                            </div>
-                            <button class="action-btn" ${canAfford ? '' : 'disabled'} onclick="app.buyBusiness('${def.id}')">${level > 0 ? 'Բարելավել' : 'Գնել'}</button>
-                        </div>
-                    `;
-                }).join('');
-            },
-
-            async buyBusiness(businessId) {
-                // Забираем накопленные клики и отправляем их вместе с покупкой —
-                // одним запросом вместо двух подряд (тот же паттерн, что и в buyClickPower)
-                clearTimeout(this.syncTimeout);
-                const clicks = this.pendingClicks;
-                this.pendingClicks = 0;
-
-                const result = await this.callApi('buyBusiness', { businessId, clicks });
-
-                if (!result.ok) {
-                    if (this.tg.HapticFeedback) this.tg.HapticFeedback.notificationOccurred('error');
-                    if (result.user) this.applyUserState(result.user);
-                    if (this.tg.showAlert) this.tg.showAlert('❌ Մետաղադրամները բավարար չեն:');
-                    else alert('Մետաղադրամները բավարար չեն:');
-                    return;
-                }
-
-                this.applyUserState(result.user);
-                if (this.tg.HapticFeedback) this.tg.HapticFeedback.notificationOccurred('success');
-            },
-
-            async collectBusinessIncome() {
-                const result = await this.callApi('collectBusinessIncome');
-
-                if (!result.ok) {
-                    if (result.user) this.applyUserState(result.user);
-                    return;
-                }
-
-                this.applyUserState(result.user);
-                if (this.tg.HapticFeedback) this.tg.HapticFeedback.notificationOccurred('success');
-                if (this.tg.showAlert) this.tg.showAlert(`💰 +${result.collected.toLocaleString()} ստացվեց բիզնեսներից!`);
-            },
-
-
+            setupEventListeners() {
                 document.getElementById('coinBtn').addEventListener('click', () => {
                     // Локально сразу показываем клик — для отзывчивости.
                     // Сервер потом сам всё пересчитает и подтвердит.
@@ -1012,7 +866,6 @@
                 if (viewName === 'profile') this.updateProfileUI();
                 if (viewName === 'main') this.checkRouletteTimer();
                 if (viewName === 'bonuses') this.startBonusesTimer();
-                if (viewName === 'businesses') this.renderBusinesses();
 
                 if (this.tg.HapticFeedback) this.tg.HapticFeedback.selectionChanged();
             },
