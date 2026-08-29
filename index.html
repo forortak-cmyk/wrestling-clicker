@@ -444,6 +444,14 @@
             </div>
         </div>
 
+        <!-- 2.5 Businesses View -->
+        <div id="businesses-view" class="view">
+            <h2 style="margin-bottom: 4px; font-size: 18px;">🏢 Բիզնեսներ</h2>
+            <p style="margin-bottom: 4px; font-size: 12px; color: var(--text-muted);">Ընթացիկ եկամուտը՝ <span id="businessIncomeDisplay" style="color: var(--accent-gold); font-weight: bold;">0 💰/ժ</span></p>
+            <p style="margin-bottom: 15px; font-size: 11px; color: var(--accent-red);">⚠️ Եկամուտը կուտակվում է առավելագույնը 3 ժամ անգործության դեպքում</p>
+            <div class="list-container" id="businessesList">Բեռնվում է...</div>
+        </div>
+
         <!-- 3. Main (Clicker + Roulette) -->
         <div id="main-view" class="view active">
             <div class="bg-decor-grid"></div>
@@ -560,6 +568,9 @@
         </button>
         <button class="nav-btn" onclick="app.switchView('referrals', this)">
             <span class="icon">👥</span><span>Ընկերներ</span>
+        </button>
+        <button class="nav-btn" onclick="app.switchView('businesses', this)">
+            <span class="icon">🏢</span><span>Բիզնեսներ</span>
         </button>
         <button class="nav-btn active" onclick="app.switchView('main', this)">
             <span class="icon">🪙</span><span>Գլխավոր</span>
@@ -767,6 +778,7 @@
                 this.state.lastDailyClaim = Number(user.last_daily_claim) || 0;
                 this.state.lastAdRewardClaim = Number(user.last_ad_reward_claim) || 0;
                 this.state.channelBonusClaimed = !!user.channel_bonus_claimed;
+                this.state.businesses = Array.isArray(user.businesses) ? user.businesses : [];
 
                 document.getElementById('score').innerText = this.state.score.toLocaleString();
                 this.updateShopUI();
@@ -774,6 +786,7 @@
                 this.renderDailyBonus();
                 this.renderWatchAdButton();
                 this.renderChannelBonusButton();
+                this.renderBusinesses();
             },
 
             updateCharacterUI() {
@@ -866,6 +879,7 @@
                 if (viewName === 'profile') this.updateProfileUI();
                 if (viewName === 'main') this.checkRouletteTimer();
                 if (viewName === 'bonuses') this.startBonusesTimer();
+                if (viewName === 'businesses') this.renderBusinesses();
 
                 if (this.tg.HapticFeedback) this.tg.HapticFeedback.selectionChanged();
             },
@@ -1466,6 +1480,63 @@
                     msgEl.innerText = 'Ստացված է ✅';
                 }
                 this.renderChannelBonusButton();
+            },
+
+            // Список бизнесов — каждый покупается один раз, даёт пассивный доход в час.
+            // Реальный расчёт и лимит в 3 часа офлайн-накопления считает сервер.
+            BUSINESSES: [
+                { id: 1, name: '🏋️ Փոքր մարզասրահ', cost: 5000000, incomePerHour: 4000 },
+                { id: 2, name: '🥊 Բռնցքամարտի ակումբ', cost: 25000000, incomePerHour: 18000 },
+                { id: 3, name: '🏟️ Մարզադաշտ', cost: 120000000, incomePerHour: 80000 },
+                { id: 4, name: '📺 Սպորտային ալիք', cost: 600000000, incomePerHour: 380000 },
+                { id: 5, name: '🏢 Մենեջմենթի գործակալություն', cost: 3000000000, incomePerHour: 1800000 },
+                { id: 6, name: '🌍 Միջազգային լիգա', cost: 15000000000, incomePerHour: 8500000 },
+                { id: 7, name: '👑 Չեմպիոնության կայսրություն', cost: 75000000000, incomePerHour: 40000000 }
+            ],
+
+            renderBusinesses() {
+                const listEl = document.getElementById('businessesList');
+                const incomeEl = document.getElementById('businessIncomeDisplay');
+                if (!listEl) return;
+
+                const owned = this.state.businesses || [];
+                const totalIncome = owned.reduce((sum, id) => {
+                    const biz = this.BUSINESSES.find(b => b.id === id);
+                    return sum + (biz ? biz.incomePerHour : 0);
+                }, 0);
+                if (incomeEl) incomeEl.innerText = `${totalIncome.toLocaleString()} 💰/ժ`;
+
+                listEl.innerHTML = this.BUSINESSES.map(biz => {
+                    const isOwned = owned.includes(biz.id);
+                    return `
+                        <div class="card-item">
+                            <div class="card-info">
+                                <h3>${biz.name}</h3>
+                                <p>Եկամուտ՝ ${biz.incomePerHour.toLocaleString()} 💰/ժ</p>
+                                <p class="cost">Գինը՝ ${biz.cost.toLocaleString()} 💰</p>
+                            </div>
+                            <button class="action-btn ${isOwned ? 'success-btn' : ''}" ${isOwned ? 'disabled' : ''} onclick="app.buyBusiness(${biz.id})">
+                                ${isOwned ? '✅ Ունեք' : 'Գնել'}
+                            </button>
+                        </div>
+                    `;
+                }).join('');
+            },
+
+            async buyBusiness(businessId) {
+                const result = await this.callApi('buyBusiness', { businessId });
+
+                if (!result.ok) {
+                    if (this.tg.HapticFeedback) this.tg.HapticFeedback.notificationOccurred('error');
+                    if (this.tg.showAlert) this.tg.showAlert('Մետաղադրամները բավարար չեն կամ բիզնեսն արդեն ձեռք է բերված:');
+                    else alert('Մետաղադրամները բավարար չեն:');
+                    if (result.user) this.applyUserState(result.user);
+                    return;
+                }
+
+                this.applyUserState(result.user);
+                if (this.tg.HapticFeedback) this.tg.HapticFeedback.notificationOccurred('success');
+                if (this.tg.showAlert) this.tg.showAlert('✅ Բիզնեսը հաջողությամբ ձեռք է բերվել!');
             },
 
             async spinRoulette() {
