@@ -38,6 +38,36 @@ const AD_REWARD_COOLDOWN_MS = 30 * 1000;
 const CHANNEL_USERNAME = '@wrestlerclicker';
 const CHANNEL_BONUS_COINS = 300000;
 
+// Бизнесы — пассивный доход в час. Каждый покупается один раз.
+// Доход накапливается офлайн, но не больше 3 часов подряд — это жёсткое ограничение,
+// проверяется здесь, на сервере, а не доверяется клиенту.
+const BUSINESSES = [
+  { id: 1, cost: 5000000, incomePerHour: 4000 },
+  { id: 2, cost: 25000000, incomePerHour: 18000 },
+  { id: 3, cost: 120000000, incomePerHour: 80000 },
+  { id: 4, cost: 600000000, incomePerHour: 380000 },
+  { id: 5, cost: 3000000000, incomePerHour: 1800000 },
+  { id: 6, cost: 15000000000, incomePerHour: 8500000 },
+  { id: 7, cost: 75000000000, incomePerHour: 40000000 }
+];
+const MAX_OFFLINE_ACCRUAL_MS = 3 * 60 * 60 * 1000; // жёсткий лимит — максимум 3 часа
+
+// Считает, сколько монет накопили бизнесы с момента последнего сбора,
+// но не больше чем за 3 часа — даже если игрок отсутствовал намного дольше
+function calculateBusinessIncome(user, now) {
+  const owned = Array.isArray(user.businesses) ? user.businesses : [];
+  const incomePerHour = owned.reduce((sum, id) => {
+    const biz = BUSINESSES.find(b => b.id === id);
+    return sum + (biz ? biz.incomePerHour : 0);
+  }, 0);
+
+  const lastCollect = Number(user.last_business_collect) || now;
+  const elapsedMs = Math.min(Math.max(0, now - lastCollect), MAX_OFFLINE_ACCRUAL_MS);
+  const earned = Math.floor(incomePerHour * (elapsedMs / (60 * 60 * 1000)));
+
+  return { earned, incomePerHour };
+}
+
 // Проверяем, что запрос действительно пришёл из Telegram и не подделан
 function verifyTelegramInitData(initData, botToken) {
   if (!initData || !botToken) return null;
@@ -136,7 +166,9 @@ module.exports = async function handler(req, res) {
         last_daily_claim: 0,
         daily_streak: 0,
         last_ad_reward_claim: 0,
-        channel_bonus_claimed: false
+        channel_bonus_claimed: false,
+        businesses: [],
+        last_business_collect: Date.now()
       }]).select().single();
       if (insertErr) throw insertErr;
       user = created;
@@ -147,7 +179,25 @@ module.exports = async function handler(req, res) {
         const { count } = await db.from('users')
           .select('*', { count: 'exact', head: true })
           .eq('referrer_id', telegramId);
-        return res.status(200).json({ ok: true, user: { ...user, refCount: count || 0 } });
+
+        // Начисляем доход от бизнесов, накопившийся с прошлого визита (максимум за 3 часа)
+        const now = Date.now();
+        const { earned: businessEarned } = calculateBusinessIncome(user, now);
+
+        let freshUser = user;
+        if (businessEarned > 0 || !user.last_business_collect) {
+          const { data: updated, error: upErr } = await db.from('users')
+            .update({
+              balance: user.balance + businessEarned,
+              total_earned: user.total_earned + businessEarned,
+              last_business_collect: now
+            })
+            .eq('telegram_id', telegramId).select().single();
+          if (upErr) throw upErr;
+          freshUser = updated;
+        }
+
+        return res.status(200).json({ ok: true, user: { ...freshUser, refCount: count || 0 } });
       }
 
       case 'sync': {
@@ -160,13 +210,15 @@ module.exports = async function handler(req, res) {
         const claimedClicks = Math.max(0, parseInt(payload && payload.clicks, 10) || 0);
         const validClicks = Math.min(claimedClicks, maxPlausibleClicks);
 
-        const earned = validClicks * (user.click_power || 1);
-        const newBalance = (user.balance || 0) + earned;
-        const newTotal = (user.total_earned || 0) + earned;
+        const clickEarned = validClicks * (user.click_power || 1);
+        const { earned: businessEarned } = calculateBusinessIncome(user, now);
+
+        const newBalance = (user.balance || 0) + clickEarned + businessEarned;
+        const newTotal = (user.total_earned || 0) + clickEarned + businessEarned;
         const newXp = (user.xp || 0) + validClicks;
 
         const { data: updated, error: upErr } = await db.from('users')
-          .update({ balance: newBalance, total_earned: newTotal, xp: newXp, last_sync: now })
+          .update({ balance: newBalance, total_earned: newTotal, xp: newXp, last_sync: now, last_business_collect: now })
           .eq('telegram_id', telegramId).select().single();
         if (upErr) throw upErr;
 
@@ -491,6 +543,41 @@ module.exports = async function handler(req, res) {
         if (upErr) throw upErr;
 
         return res.status(200).json({ ok: true, user: updated, reward: CHANNEL_BONUS_COINS });
+      }
+
+      case 'buyBusiness': {
+        const businessId = payload && payload.businessId;
+        const biz = BUSINESSES.find(b => b.id === businessId);
+        if (!biz) return res.status(400).json({ ok: false, error: 'Unknown business' });
+
+        const owned = Array.isArray(user.businesses) ? user.businesses : [];
+        if (owned.includes(businessId)) {
+          return res.status(400).json({ ok: false, error: 'Already owned', user });
+        }
+
+        // Сначала собираем накопленный доход (с лимитом 3 часа), потом считаем баланс для покупки
+        const now = Date.now();
+        const { earned: businessEarned } = calculateBusinessIncome(user, now);
+        const syncedBalance = user.balance + businessEarned;
+        const syncedTotal = user.total_earned + businessEarned;
+
+        if (syncedBalance < biz.cost) {
+          return res.status(400).json({ ok: false, error: 'Not enough coins', user });
+        }
+
+        const newOwned = [...owned, businessId];
+
+        const { data: updated, error: upErr } = await db.from('users')
+          .update({
+            balance: syncedBalance - biz.cost,
+            total_earned: syncedTotal,
+            businesses: newOwned,
+            last_business_collect: now
+          })
+          .eq('telegram_id', telegramId).select().single();
+        if (upErr) throw upErr;
+
+        return res.status(200).json({ ok: true, user: updated });
       }
 
       default:
