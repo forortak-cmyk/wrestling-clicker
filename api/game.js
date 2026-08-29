@@ -22,41 +22,6 @@ const WITHDRAWAL_RATE_COINS = 250000000;
 const WITHDRAWAL_RATE_AMD = 750;
 const MIN_WITHDRAWAL_COINS = 250000000;
 
-// Бизнесы: каждый можно улучшать много раз, цена следующего уровня растёт линейно
-// (baseCost * (текущий уровень + 1)), доход в час растёт пропорционально уровню.
-// Жёсткий лимит: пассивный доход копится максимум за 3 часа офлайна — сколько бы
-// человек ни отсутствовал, дальше 3 часов доход не накапливается.
-const BUSINESS_DEFS = [
-  { id: 'gym',    baseCost: 5000000,    incomePerHour: 8000 },
-  { id: 'arena',  baseCost: 25000000,   incomePerHour: 45000 },
-  { id: 'tv',     baseCost: 120000000,  incomePerHour: 220000 },
-  { id: 'agency', baseCost: 600000000,  incomePerHour: 1200000 },
-  { id: 'league', baseCost: 3000000000, incomePerHour: 6500000 }
-];
-const MAX_OFFLINE_BUSINESS_MS = 3 * 60 * 60 * 1000;
-
-function getBusinessHourlyRate(businesses) {
-  const owned = businesses || {};
-  let rate = 0;
-  for (const def of BUSINESS_DEFS) {
-    const level = owned[def.id] || 0;
-    rate += def.incomePerHour * level;
-  }
-  return rate;
-}
-
-// Считает, сколько монет накопилось от бизнесов с последнего сбора,
-// не мутируя пользователя — только возвращает сумму и текущее время
-function computePendingBusinessIncome(user) {
-  const now = Date.now();
-  const lastCollect = Number(user.last_business_collect) || now;
-  const elapsedMs = Math.max(0, now - lastCollect);
-  const cappedMs = Math.min(elapsedMs, MAX_OFFLINE_BUSINESS_MS);
-  const hourlyRate = getBusinessHourlyRate(user.businesses);
-  const earned = Math.floor(hourlyRate * cappedMs / 3600000);
-  return { earned, now };
-}
-
 // Ежедневный бонус за вход: 7 дней подряд, растёт на 20,000 в день.
 // Пропуск дня (>48ч без захода) обнуляет прогресс до 1-го дня.
 const DAILY_BONUS_REWARDS = [10000, 30000, 50000, 70000, 90000, 110000, 130000];
@@ -171,9 +136,7 @@ module.exports = async function handler(req, res) {
         last_daily_claim: 0,
         daily_streak: 0,
         last_ad_reward_claim: 0,
-        channel_bonus_claimed: false,
-        businesses: {},
-        last_business_collect: Date.now()
+        channel_bonus_claimed: false
       }]).select().single();
       if (insertErr) throw insertErr;
       user = created;
@@ -184,28 +147,7 @@ module.exports = async function handler(req, res) {
         const { count } = await db.from('users')
           .select('*', { count: 'exact', head: true })
           .eq('referrer_id', telegramId);
-
-        // Автоматически зачисляем пассивный доход от бизнесов при каждом входе
-        // (капается на 3 часа офлайна — см. computePendingBusinessIncome)
-        const { earned, now } = computePendingBusinessIncome(user);
-        let finalUser = user;
-        if (earned > 0) {
-          const { data: updated, error: upErr } = await db.from('users')
-            .update({
-              balance: (user.balance || 0) + earned,
-              total_earned: (user.total_earned || 0) + earned,
-              last_business_collect: now
-            })
-            .eq('telegram_id', telegramId).select().single();
-          if (upErr) throw upErr;
-          finalUser = updated;
-        }
-
-        return res.status(200).json({
-          ok: true,
-          user: { ...finalUser, refCount: count || 0 },
-          businessIncomeCollected: earned
-        });
+        return res.status(200).json({ ok: true, user: { ...user, refCount: count || 0 } });
       }
 
       case 'sync': {
@@ -270,75 +212,6 @@ module.exports = async function handler(req, res) {
         if (upErr) throw upErr;
 
         return res.status(200).json({ ok: true, user: updated });
-      }
-
-      case 'buyBusiness': {
-        const businessId = payload && payload.businessId;
-        const def = BUSINESS_DEFS.find(b => b.id === businessId);
-        if (!def) return res.status(400).json({ ok: false, error: 'Unknown business' });
-
-        // Синхронизируем накопленные клики и пассивный доход от бизнесов
-        // прямо в этом же запросе, одним походом в базу
-        const now = Date.now();
-        const lastSync = Number(user.last_sync) || now;
-        const elapsedMs = Math.max(0, now - lastSync);
-        const maxPlausibleClicks = Math.floor(elapsedMs / MIN_CLICK_INTERVAL_MS) + 5;
-        const claimedClicks = Math.max(0, parseInt(payload && payload.clicks, 10) || 0);
-        const validClicks = Math.min(claimedClicks, maxPlausibleClicks);
-        const clickEarned = validClicks * (user.click_power || 1);
-
-        const { earned: businessEarned } = computePendingBusinessIncome(user);
-
-        const baseBalance = (user.balance || 0) + clickEarned + businessEarned;
-        const baseTotal = (user.total_earned || 0) + clickEarned + businessEarned;
-        const baseXp = (user.xp || 0) + validClicks;
-
-        const currentLevel = (user.businesses && user.businesses[businessId]) || 0;
-        const cost = def.baseCost * (currentLevel + 1);
-
-        if (baseBalance < cost) {
-          // Покупка не удалась, но уже накопленное (клики + пассивный доход)
-          // всё равно фиксируем — игрок не должен терять прогресс из-за отказа
-          const { data: updated, error: upErr } = await db.from('users')
-            .update({ balance: baseBalance, total_earned: baseTotal, xp: baseXp, last_sync: now, last_business_collect: now })
-            .eq('telegram_id', telegramId).select().single();
-          if (upErr) throw upErr;
-          return res.status(400).json({ ok: false, error: 'Not enough coins', user: updated });
-        }
-
-        const newBusinesses = { ...(user.businesses || {}), [businessId]: currentLevel + 1 };
-
-        const { data: updated, error: upErr } = await db.from('users')
-          .update({
-            balance: baseBalance - cost,
-            total_earned: baseTotal,
-            xp: baseXp,
-            businesses: newBusinesses,
-            last_sync: now,
-            last_business_collect: now
-          })
-          .eq('telegram_id', telegramId).select().single();
-        if (upErr) throw upErr;
-
-        return res.status(200).json({ ok: true, user: updated });
-      }
-
-      case 'collectBusinessIncome': {
-        const { earned, now } = computePendingBusinessIncome(user);
-        if (earned <= 0) {
-          return res.status(400).json({ ok: false, error: 'Nothing to collect', user });
-        }
-
-        const { data: updated, error: upErr } = await db.from('users')
-          .update({
-            balance: (user.balance || 0) + earned,
-            total_earned: (user.total_earned || 0) + earned,
-            last_business_collect: now
-          })
-          .eq('telegram_id', telegramId).select().single();
-        if (upErr) throw upErr;
-
-        return res.status(200).json({ ok: true, user: updated, collected: earned });
       }
 
       case 'buyVoucher': {
