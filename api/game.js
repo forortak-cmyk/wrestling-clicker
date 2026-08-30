@@ -180,24 +180,16 @@ module.exports = async function handler(req, res) {
           .select('*', { count: 'exact', head: true })
           .eq('referrer_id', telegramId);
 
-        // Начисляем доход от бизнесов, накопившийся с прошлого визита (максимум за 3 часа)
+        // Считаем, сколько накопилось от бизнесов, но НЕ начисляем автоматически —
+        // игрок должен нажать «Հավաքել», чтобы забрать доход
         const now = Date.now();
-        const { earned: businessEarned } = calculateBusinessIncome(user, now);
+        const { earned: pendingBusinessIncome } = calculateBusinessIncome(user, now);
 
-        let freshUser = user;
-        if (businessEarned > 0 || !user.last_business_collect) {
-          const { data: updated, error: upErr } = await db.from('users')
-            .update({
-              balance: user.balance + businessEarned,
-              total_earned: user.total_earned + businessEarned,
-              last_business_collect: now
-            })
-            .eq('telegram_id', telegramId).select().single();
-          if (upErr) throw upErr;
-          freshUser = updated;
-        }
-
-        return res.status(200).json({ ok: true, user: { ...freshUser, refCount: count || 0 } });
+        return res.status(200).json({
+          ok: true,
+          user: { ...user, refCount: count || 0 },
+          pendingBusinessIncome
+        });
       }
 
       case 'sync': {
@@ -210,15 +202,13 @@ module.exports = async function handler(req, res) {
         const claimedClicks = Math.max(0, parseInt(payload && payload.clicks, 10) || 0);
         const validClicks = Math.min(claimedClicks, maxPlausibleClicks);
 
-        const clickEarned = validClicks * (user.click_power || 1);
-        const { earned: businessEarned } = calculateBusinessIncome(user, now);
-
-        const newBalance = (user.balance || 0) + clickEarned + businessEarned;
-        const newTotal = (user.total_earned || 0) + clickEarned + businessEarned;
+        const earned = validClicks * (user.click_power || 1);
+        const newBalance = (user.balance || 0) + earned;
+        const newTotal = (user.total_earned || 0) + earned;
         const newXp = (user.xp || 0) + validClicks;
 
         const { data: updated, error: upErr } = await db.from('users')
-          .update({ balance: newBalance, total_earned: newTotal, xp: newXp, last_sync: now, last_business_collect: now })
+          .update({ balance: newBalance, total_earned: newTotal, xp: newXp, last_sync: now })
           .eq('telegram_id', telegramId).select().single();
         if (upErr) throw upErr;
 
@@ -578,6 +568,26 @@ module.exports = async function handler(req, res) {
         if (upErr) throw upErr;
 
         return res.status(200).json({ ok: true, user: updated });
+      }
+
+      case 'collectBusinessIncome': {
+        const now = Date.now();
+        const { earned } = calculateBusinessIncome(user, now);
+
+        if (earned <= 0) {
+          return res.status(400).json({ ok: false, error: 'Nothing to collect', user });
+        }
+
+        const { data: updated, error: upErr } = await db.from('users')
+          .update({
+            balance: user.balance + earned,
+            total_earned: user.total_earned + earned,
+            last_business_collect: now
+          })
+          .eq('telegram_id', telegramId).select().single();
+        if (upErr) throw upErr;
+
+        return res.status(200).json({ ok: true, user: updated, collected: earned });
       }
 
       default:
