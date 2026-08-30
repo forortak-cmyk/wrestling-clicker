@@ -449,6 +449,12 @@
             <h2 style="margin-bottom: 4px; font-size: 18px;">🏢 Բիզնեսներ</h2>
             <p style="margin-bottom: 4px; font-size: 12px; color: var(--text-muted);">Ընթացիկ եկամուտը՝ <span id="businessIncomeDisplay" style="color: var(--accent-gold); font-weight: bold;">0 💰/ժ</span></p>
             <p style="margin-bottom: 15px; font-size: 11px; color: var(--accent-red);">⚠️ Եկամուտը կուտակվում է առավելագույնը 3 ժամ անգործության դեպքում</p>
+
+            <div class="ref-banner" style="text-align: center; padding: 14px;">
+                <p style="font-size: 13px; margin-bottom: 8px;">Կուտակված է՝ <span id="businessPendingAmount" style="color: var(--accent-green); font-weight: bold;">0 💰</span></p>
+                <button class="action-btn success-btn" id="collectBusinessBtn" style="width: 100%; margin: 0; padding: 10px;" onclick="app.collectBusinessIncome()">Հավաքել</button>
+            </div>
+
             <div class="list-container" id="businessesList">Բեռնվում է...</div>
         </div>
 
@@ -460,6 +466,11 @@
             <div style="width:100%; max-width:400px; position:relative; z-index:1; margin-bottom:15px; background: linear-gradient(135deg, #2c1e0a 0%, #1c1c1e 100%); border: 1px solid var(--accent-gold); border-radius: 16px; padding: 14px 16px; text-align:center;">
                 <h3 style="font-size:15px; color: var(--accent-gold); margin-bottom:6px;">🏆 Մրցույթ</h3>
                 <p style="font-size:12px; color:#ddd; line-height:1.4;">Ով 3 օրում կհրավիրի ամենաշատ ընկերներին, կստանա <span style="color: var(--accent-gold); font-weight:bold;">1000 ֏</span>!</p>
+            </div>
+
+            <div id="floatingCollectBanner" style="display: none; width:100%; max-width:400px; position:relative; z-index:1; margin-bottom:15px; background: linear-gradient(135deg, #0a2c1e 0%, #1c1c1e 100%); border: 1px solid var(--accent-green); border-radius: 16px; padding: 14px 16px; text-align:center;">
+                <p style="font-size:13px; color:#ddd; margin-bottom:8px;">🏢 Ձեր բիզնեսները վաստակել են <span id="floatingCollectAmount" style="color: var(--accent-green); font-weight:bold;">0</span> 💰</p>
+                <button class="action-btn success-btn" style="width:100%; margin:0; padding:10px;" onclick="app.collectBusinessIncome()">Հավաքել</button>
             </div>
 
             <div class="clicker-wrapper">
@@ -779,6 +790,7 @@
                 this.state.lastAdRewardClaim = Number(user.last_ad_reward_claim) || 0;
                 this.state.channelBonusClaimed = !!user.channel_bonus_claimed;
                 this.state.businesses = Array.isArray(user.businesses) ? user.businesses : [];
+                this.state.lastBusinessCollect = Number(user.last_business_collect) || Date.now();
 
                 document.getElementById('score').innerText = this.state.score.toLocaleString();
                 this.updateShopUI();
@@ -879,7 +891,10 @@
                 if (viewName === 'profile') this.updateProfileUI();
                 if (viewName === 'main') this.checkRouletteTimer();
                 if (viewName === 'bonuses') this.startBonusesTimer();
-                if (viewName === 'businesses') this.renderBusinesses();
+                if (viewName === 'businesses') {
+                    this.renderBusinesses();
+                    this.startBusinessIncomeTicker();
+                }
 
                 if (this.tg.HapticFeedback) this.tg.HapticFeedback.selectionChanged();
             },
@@ -1141,6 +1156,11 @@
                     this.state.myReferrerId ? 'none' : 'block';
 
                 this.dataLoaded = true;
+
+                // Если что-то накопилось от бизнесов — показываем плавающую кнопку сбора
+                if ((result.pendingBusinessIncome || 0) > 0) {
+                    this.showFloatingCollectButton(result.pendingBusinessIncome);
+                }
             },
 
             async loadReferralsData() {
@@ -1537,6 +1557,64 @@
                 this.applyUserState(result.user);
                 if (this.tg.HapticFeedback) this.tg.HapticFeedback.notificationOccurred('success');
                 if (this.tg.showAlert) this.tg.showAlert('✅ Բիզնեսը հաջողությամբ ձեռք է բերվել!');
+            },
+
+            businessIncomeTickInterval: null,
+
+            // Считает, сколько "на глаз" уже накопилось с последнего сбора —
+            // только для отображения, реальную сумму всегда проверяет и начисляет сервер
+            getEstimatedPendingIncome() {
+                const owned = this.state.businesses || [];
+                const incomePerHour = owned.reduce((sum, id) => {
+                    const biz = this.BUSINESSES.find(b => b.id === id);
+                    return sum + (biz ? biz.incomePerHour : 0);
+                }, 0);
+                if (incomePerHour <= 0) return 0;
+
+                const last = this.state.lastBusinessCollect || Date.now();
+                const MAX_MS = 3 * 60 * 60 * 1000;
+                const elapsed = Math.min(Math.max(0, Date.now() - last), MAX_MS);
+                return Math.floor(incomePerHour * (elapsed / (60 * 60 * 1000)));
+            },
+
+            showFloatingCollectButton(amount) {
+                const banner = document.getElementById('floatingCollectBanner');
+                const amountEl = document.getElementById('floatingCollectAmount');
+                if (!banner || !amountEl) return;
+
+                if (amount > 0) {
+                    amountEl.innerText = amount.toLocaleString();
+                    banner.style.display = 'block';
+                } else {
+                    banner.style.display = 'none';
+                }
+            },
+
+            startBusinessIncomeTicker() {
+                clearInterval(this.businessIncomeTickInterval);
+                const update = () => {
+                    const pending = this.getEstimatedPendingIncome();
+                    const pendingEl = document.getElementById('businessPendingAmount');
+                    const btnEl = document.getElementById('collectBusinessBtn');
+                    if (pendingEl) pendingEl.innerText = `${pending.toLocaleString()} 💰`;
+                    if (btnEl) btnEl.disabled = pending <= 0;
+                };
+                update();
+                this.businessIncomeTickInterval = setInterval(update, 1000);
+            },
+
+            async collectBusinessIncome() {
+                const result = await this.callApi('collectBusinessIncome');
+
+                if (!result.ok) {
+                    if (this.tg.showAlert) this.tg.showAlert('Դեռ ոչինչ չի կուտակվել:');
+                    return;
+                }
+
+                this.applyUserState(result.user);
+                this.showFloatingCollectButton(0);
+                if (this.tg.HapticFeedback) this.tg.HapticFeedback.notificationOccurred('success');
+                if (this.tg.showAlert) this.tg.showAlert(`🎉 +${result.collected.toLocaleString()} 💰 հավաքվեց!`);
             },
 
             async spinRoulette() {
