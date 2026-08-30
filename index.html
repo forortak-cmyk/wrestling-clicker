@@ -483,6 +483,7 @@
                     <div class="xp-bar-fill" id="xpBarFill"></div>
                 </div>
                 <div class="xp-label" id="xpLabel">0 / 50 XP</div>
+                <button class="action-btn" id="autoClickerBtn" style="margin: 10px 0 0 0; padding: 8px 16px;" onclick="app.toggleAutoClicker()">🤖 Միացնել ավտոսեղմումը</button>
             </div>
 
             <div class="roulette-container">
@@ -832,24 +833,7 @@
 
             setupEventListeners() {
                 document.getElementById('coinBtn').addEventListener('click', () => {
-                    // Локально сразу показываем клик — для отзывчивости.
-                    // Сервер потом сам всё пересчитает и подтвердит.
-                    this.state.score += this.state.clickPower;
-                    this.state.totalEarned += this.state.clickPower;
-                    this.state.xp = (this.state.xp || 0) + 1;
-                    document.getElementById('score').innerText = this.state.score.toLocaleString();
-                    this.updateCharacterUI();
-
-                    this.pendingClicks += 1;
-                    if (this.tg.HapticFeedback) this.tg.HapticFeedback.impactOccurred('light');
-                    this.scheduleSync();
-
-                    // Показываем рекламу каждые 100 кликов
-                    this.clicksSinceLastAd += 1;
-                    if (this.clicksSinceLastAd >= this.CLICKS_PER_AD) {
-                        this.clicksSinceLastAd = 0;
-                        showInterstitialAd();
-                    }
+                    this.performClick(true);
                 });
 
                 document.addEventListener('visibilitychange', () => {
@@ -859,6 +843,52 @@
                 const withdrawInput = document.getElementById('withdrawCoinsInput');
                 if (withdrawInput) {
                     withdrawInput.addEventListener('input', () => this.updateWithdrawPreview());
+                }
+            },
+
+            // withHaptic=false для автокликера — вибрация 4 раза в секунду была бы навязчивой
+            performClick(withHaptic) {
+                // Локально сразу показываем клик — для отзывчивости.
+                // Сервер потом сам всё пересчитает и подтвердит.
+                this.state.score += this.state.clickPower;
+                this.state.totalEarned += this.state.clickPower;
+                this.state.xp = (this.state.xp || 0) + 1;
+                document.getElementById('score').innerText = this.state.score.toLocaleString();
+                this.updateCharacterUI();
+
+                this.pendingClicks += 1;
+                if (withHaptic && this.tg.HapticFeedback) this.tg.HapticFeedback.impactOccurred('light');
+                this.scheduleSync();
+
+                // Показываем рекламу каждые 100 кликов
+                this.clicksSinceLastAd += 1;
+                if (this.clicksSinceLastAd >= this.CLICKS_PER_AD) {
+                    this.clicksSinceLastAd = 0;
+                    showInterstitialAd();
+                }
+            },
+
+            autoClickerEnabled: false,
+            autoClickerInterval: null,
+
+            toggleAutoClicker() {
+                this.autoClickerEnabled = !this.autoClickerEnabled;
+                const btnEl = document.getElementById('autoClickerBtn');
+
+                if (this.autoClickerEnabled) {
+                    if (btnEl) {
+                        btnEl.innerText = '🤖 Ավտոսեղմումն ակտիվ է';
+                        btnEl.classList.add('success-btn');
+                    }
+                    this.autoClickerInterval = setInterval(() => this.performClick(false), 250); // 4 клика в секунду
+                    if (this.tg.HapticFeedback) this.tg.HapticFeedback.notificationOccurred('success');
+                } else {
+                    if (btnEl) {
+                        btnEl.innerText = '🤖 Միացնել ավտոսեղմումը';
+                        btnEl.classList.remove('success-btn');
+                    }
+                    clearInterval(this.autoClickerInterval);
+                    if (this.tg.HapticFeedback) this.tg.HapticFeedback.selectionChanged();
                 }
             },
 
