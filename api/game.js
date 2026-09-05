@@ -32,6 +32,8 @@ const DAILY_BONUS_RESET_MS = 48 * 60 * 60 * 1000;
 // точная проверка реального просмотра рекламы недоступна на клиенте)
 const AD_REWARD_COINS = 30000;
 const AD_REWARD_COOLDOWN_MS = 30 * 1000;
+const POPUP_REWARD_COINS = 30000;
+const POPUP_REWARD_COOLDOWN_MS = 30 * 1000;
 
 // Бонус за подписку на Telegram-канал — выдаётся один раз, проверяется через Telegram API.
 // Бот должен быть добавлен в канал администратором, иначе проверка не сработает.
@@ -166,6 +168,7 @@ module.exports = async function handler(req, res) {
         last_daily_claim: 0,
         daily_streak: 0,
         last_ad_reward_claim: 0,
+        last_popup_reward_claim: 0,
         channel_bonus_claimed: false,
         businesses: [],
         last_business_collect: Date.now()
@@ -494,6 +497,26 @@ module.exports = async function handler(req, res) {
         if (upErr) throw upErr;
 
         return res.status(200).json({ ok: true, user: updated, reward: AD_REWARD_COINS });
+      }
+
+      case 'claimPopupReward': {
+        const now = Date.now();
+        const lastClaim = Number(user.last_popup_reward_claim) || 0;
+
+        if (now - lastClaim < POPUP_REWARD_COOLDOWN_MS) {
+          return res.status(400).json({ ok: false, error: 'Cooldown active', user });
+        }
+
+        const { data: updated, error: upErr } = await db.from('users')
+          .update({
+            balance: user.balance + POPUP_REWARD_COINS,
+            total_earned: user.total_earned + POPUP_REWARD_COINS,
+            last_popup_reward_claim: now
+          })
+          .eq('telegram_id', telegramId).select().single();
+        if (upErr) throw upErr;
+
+        return res.status(200).json({ ok: true, user: updated, reward: POPUP_REWARD_COINS });
       }
 
       case 'claimChannelBonus': {
