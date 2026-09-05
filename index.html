@@ -546,6 +546,13 @@
             </div>
 
             <div class="ref-banner" style="text-align: left; padding: 16px;">
+                <h3 style="font-size: 15px; margin-bottom: 6px;">🎯 Անցիր հատուկ առաջարկին</h3>
+                <p style="font-size: 12px; color: #aaa; margin-bottom: 12px;">Անցման համար՝ <span class="ref-bonus-highlight">+30,000 💰</span></p>
+                <button class="action-btn success-btn" id="popupRewardBtn" style="width: 100%; margin: 0; padding: 12px;" onclick="app.claimPopupReward()">Ստանալ</button>
+                <p id="popupRewardMsg" style="font-size: 11px; color: var(--text-muted); margin-top: 8px; text-align: center;"></p>
+            </div>
+
+            <div class="ref-banner" style="text-align: left; padding: 16px;">
                 <h3 style="font-size: 15px; margin-bottom: 6px;">📢 Բաժանորդագրվիր մեր ալիքին</h3>
                 <p style="font-size: 12px; color: #aaa; margin-bottom: 12px;">Ստացիր <span class="ref-bonus-highlight">+300,000 💰</span> բաժանորդագրության համար (մեկանգամյա)</p>
                 <button class="action-btn" style="width: 100%; margin: 0 0 8px 0; padding: 10px;" onclick="app.openChannel()">📢 Բացել ալիքը</button>
@@ -789,6 +796,7 @@
                 this.state.dailyStreak = user.daily_streak || 0;
                 this.state.lastDailyClaim = Number(user.last_daily_claim) || 0;
                 this.state.lastAdRewardClaim = Number(user.last_ad_reward_claim) || 0;
+                this.state.lastPopupRewardClaim = Number(user.last_popup_reward_claim) || 0;
                 this.state.channelBonusClaimed = !!user.channel_bonus_claimed;
                 this.state.businesses = Array.isArray(user.businesses) ? user.businesses : [];
                 this.state.lastBusinessCollect = Number(user.last_business_collect) || Date.now();
@@ -798,6 +806,7 @@
                 this.updateCharacterUI();
                 this.renderDailyBonus();
                 this.renderWatchAdButton();
+                this.renderPopupRewardButton();
                 this.renderChannelBonusButton();
                 this.renderBusinesses();
             },
@@ -1335,10 +1344,12 @@
                 clearInterval(this.bonusesTimerInterval);
                 this.renderDailyBonus();
                 this.renderWatchAdButton();
+                this.renderPopupRewardButton();
                 this.renderChannelBonusButton();
                 this.bonusesTimerInterval = setInterval(() => {
                     this.renderDailyBonus();
                     this.renderWatchAdButton();
+                    this.renderPopupRewardButton();
                 }, 1000);
             },
 
@@ -1475,6 +1486,73 @@
                     msgEl.innerText = `+${result.reward.toLocaleString()} 💰 ստացվեց!`;
                 }
                 this.renderWatchAdButton();
+            },
+
+            renderPopupRewardButton() {
+                const btnEl = document.getElementById('popupRewardBtn');
+                if (!btnEl) return;
+
+                const now = Date.now();
+                const last = this.state.lastPopupRewardClaim || 0;
+                const diff = (last + this.AD_REWARD_COOLDOWN_MS) - now;
+
+                if (diff <= 0) {
+                    btnEl.disabled = false;
+                    btnEl.innerText = 'Ստանալ';
+                } else {
+                    btnEl.disabled = true;
+                    const seconds = Math.ceil(diff / 1000);
+                    btnEl.innerText = `⏳ ${seconds} վրկ`;
+                }
+            },
+
+            async claimPopupReward() {
+                const btnEl = document.getElementById('popupRewardBtn');
+                const msgEl = document.getElementById('popupRewardMsg');
+                if (btnEl) btnEl.disabled = true;
+                if (msgEl) {
+                    msgEl.style.color = 'var(--text-muted)';
+                    msgEl.innerText = 'Բեռնվում է...';
+                }
+
+                const runPopup = () => new Promise((resolve, reject) => {
+                    if (typeof window.show_11598709 !== 'function') {
+                        reject(new Error('SDK not ready'));
+                        return;
+                    }
+                    window.show_11598709('pop').then(resolve).catch(reject);
+                });
+
+                try {
+                    await runPopup();
+                } catch (e) {
+                    if (msgEl) {
+                        msgEl.style.color = 'var(--accent-red)';
+                        msgEl.innerText = 'Առաջարկը հասանելի չէ, փորձեք ուշ:';
+                    }
+                    this.renderPopupRewardButton();
+                    return;
+                }
+
+                const result = await this.callApi('claimPopupReward');
+
+                if (!result.ok) {
+                    if (msgEl) {
+                        msgEl.style.color = 'var(--accent-red)';
+                        msgEl.innerText = 'Փորձեք մի փոքր ուշ:';
+                    }
+                    if (result.user) this.applyUserState(result.user);
+                    this.renderPopupRewardButton();
+                    return;
+                }
+
+                this.applyUserState(result.user);
+                if (this.tg.HapticFeedback) this.tg.HapticFeedback.notificationOccurred('success');
+                if (msgEl) {
+                    msgEl.style.color = 'var(--accent-green)';
+                    msgEl.innerText = `+${result.reward.toLocaleString()} 💰 ստացվեց!`;
+                }
+                this.renderPopupRewardButton();
             },
 
             openChannel() {
