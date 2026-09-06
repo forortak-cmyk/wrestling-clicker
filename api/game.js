@@ -40,35 +40,9 @@ const POPUP_REWARD_COOLDOWN_MS = 30 * 1000;
 const CHANNEL_USERNAME = '@wrestlerclicker';
 const CHANNEL_BONUS_COINS = 300000;
 
-// Бизнесы — пассивный доход в час. Каждый покупается один раз.
-// Доход накапливается офлайн, но не больше 3 часов подряд — это жёсткое ограничение,
-// проверяется здесь, на сервере, а не доверяется клиенту.
-const BUSINESSES = [
-  { id: 1, cost: 5000000, incomePerHour: 4000 },
-  { id: 2, cost: 25000000, incomePerHour: 18000 },
-  { id: 3, cost: 120000000, incomePerHour: 80000 },
-  { id: 4, cost: 600000000, incomePerHour: 380000 },
-  { id: 5, cost: 3000000000, incomePerHour: 1800000 },
-  { id: 6, cost: 15000000000, incomePerHour: 8500000 },
-  { id: 7, cost: 75000000000, incomePerHour: 40000000 }
-];
-const MAX_OFFLINE_ACCRUAL_MS = 3 * 60 * 60 * 1000; // жёсткий лимит — максимум 3 часа
-
-// Считает, сколько монет накопили бизнесы с момента последнего сбора,
-// но не больше чем за 3 часа — даже если игрок отсутствовал намного дольше
-function calculateBusinessIncome(user, now) {
-  const owned = Array.isArray(user.businesses) ? user.businesses : [];
-  const incomePerHour = owned.reduce((sum, id) => {
-    const biz = BUSINESSES.find(b => b.id === id);
-    return sum + (biz ? biz.incomePerHour : 0);
-  }, 0);
-
-  const lastCollect = Number(user.last_business_collect) || now;
-  const elapsedMs = Math.min(Math.max(0, now - lastCollect), MAX_OFFLINE_ACCRUAL_MS);
-  const earned = Math.floor(incomePerHour * (elapsedMs / (60 * 60 * 1000)));
-
-  return { earned, incomePerHour };
-}
+// Бизнесы и расчёт пассивного дохода вынесены в отдельный файл — его же использует
+// api/check-caps.js для проверки, у кого забит 3-часовой лимит
+const { BUSINESSES, MAX_OFFLINE_ACCRUAL_MS, calculateBusinessIncome } = require('./business-utils');
 
 // Проверяем, что запрос действительно пришёл из Telegram и не подделан
 function verifyTelegramInitData(initData, botToken) {
@@ -171,7 +145,8 @@ module.exports = async function handler(req, res) {
         last_popup_reward_claim: 0,
         channel_bonus_claimed: false,
         businesses: [],
-        last_business_collect: Date.now()
+        last_business_collect: Date.now(),
+        cap_notified: false
       }]).select().single();
       if (insertErr) throw insertErr;
       user = created;
@@ -585,7 +560,8 @@ module.exports = async function handler(req, res) {
             balance: syncedBalance - biz.cost,
             total_earned: syncedTotal,
             businesses: newOwned,
-            last_business_collect: now
+            last_business_collect: now,
+            cap_notified: false
           })
           .eq('telegram_id', telegramId).select().single();
         if (upErr) throw upErr;
@@ -605,7 +581,8 @@ module.exports = async function handler(req, res) {
           .update({
             balance: user.balance + earned,
             total_earned: user.total_earned + earned,
-            last_business_collect: now
+            last_business_collect: now,
+            cap_notified: false
           })
           .eq('telegram_id', telegramId).select().single();
         if (upErr) throw upErr;
