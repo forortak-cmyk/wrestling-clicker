@@ -401,6 +401,9 @@
 
             <h3 style="font-size: 13px; color: #8e8e93; margin: 15px 0 8px;">Բոլոր մարզադահլիճները՝</h3>
             <div class="list-container" id="shopTiersList"></div>
+
+            <h3 style="font-size: 13px; color: #8e8e93; margin: 20px 0 8px;">💎 Գնել մետաղադրամներ ⭐-ով</h3>
+            <div class="list-container" id="coinPackagesList">Բեռնվում է...</div>
         </div>
 
         <!-- 2. Referrals -->
@@ -462,6 +465,16 @@
         <div id="main-view" class="view active">
             <div class="bg-decor-grid"></div>
             <div class="bg-decor-circle"></div>
+
+            <div id="battlePassBanner" style="width:100%; max-width:400px; position:relative; z-index:1; margin-bottom:15px; background: linear-gradient(135deg, #2c0a2c 0%, #1c1c1e 100%); border: 1px solid #b967ff; border-radius: 16px; padding: 14px 16px; cursor:pointer;" onclick="app.switchView('battlepass', null)">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                    <h3 style="font-size:14px; color:#c98bff; margin:0;">🎖 Մարտական անցագիր</h3>
+                    <span id="bpLevelLabel" style="font-size:12px; color:#ddd;">Մակարդակ 0/100</span>
+                </div>
+                <div style="background:#0c0c0e; border-radius:8px; height:8px; overflow:hidden;">
+                    <div id="bpProgressFill" style="height:100%; width:0%; background:linear-gradient(90deg,#b967ff,#ff6ec7); transition: width .3s;"></div>
+                </div>
+            </div>
 
             <div style="width:100%; max-width:400px; position:relative; z-index:1; margin-bottom:15px; background: linear-gradient(135deg, #2c1e0a 0%, #1c1c1e 100%); border: 1px solid var(--accent-gold); border-radius: 16px; padding: 14px 16px; text-align:center;">
                 <h3 style="font-size:15px; color: var(--accent-gold); margin-bottom:6px;">🏆 Մրցույթ</h3>
@@ -578,6 +591,24 @@
             </button>
         </div>
 
+        <!-- 6. Battle Pass View -->
+        <div id="battlepass-view" class="view">
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+                <button class="action-btn" style="margin:0; padding:8px 12px;" onclick="app.switchView('main', document.getElementById('navMainBtn'))">← Ետ</button>
+                <h2 style="font-size: 18px; margin: 0; color: #c98bff;">🎖 Մարտական անցագիր</h2>
+            </div>
+            <p id="bpSeasonTimer" style="font-size: 11px; color: var(--text-muted); margin-bottom: 10px;">Սեզոնը մնում է հաշվարկվում...</p>
+
+            <div id="bpPremiumBanner" class="ref-banner" style="text-align:center; padding:14px; margin-bottom:12px; border-color:#b967ff;">
+                <p id="bpPremiumStatus" style="font-size:13px; margin-bottom:8px;">Պրեմիում գիծը կողպված է</p>
+                <button class="action-btn success-btn" id="bpBuyPremiumBtn" style="width:100%; margin:0; padding:10px;" onclick="app.buyPremiumPass()">
+                    🎖 Ակտիվացնել Պրեմիում ⭐ <span id="bpPremiumPriceLabel">450</span>
+                </button>
+            </div>
+
+            <div class="list-container" id="battlePassList">Բեռնվում է...</div>
+        </div>
+
     </div>
 
     <!-- Navigation -->
@@ -591,7 +622,7 @@
         <button class="nav-btn" onclick="app.switchView('businesses', this)">
             <span class="icon">🏢</span><span>Բիզնեսներ</span>
         </button>
-        <button class="nav-btn active" onclick="app.switchView('main', this)">
+        <button class="nav-btn active" id="navMainBtn" onclick="app.switchView('main', this)">
             <span class="icon">🪙</span><span>Գլխավոր</span>
         </button>
         <button class="nav-btn" onclick="app.switchView('business', this)">
@@ -800,6 +831,10 @@
                 this.state.channelBonusClaimed = !!user.channel_bonus_claimed;
                 this.state.businesses = Array.isArray(user.businesses) ? user.businesses : [];
                 this.state.lastBusinessCollect = Number(user.last_business_collect) || Date.now();
+                this.state.bpPoints = user.bp_points || 0;
+                this.state.bpPremium = !!user.bp_premium;
+                this.state.bpClaimedFree = Array.isArray(user.bp_claimed_free) ? user.bp_claimed_free : [];
+                this.state.bpClaimedPremium = Array.isArray(user.bp_claimed_premium) ? user.bp_claimed_premium : [];
 
                 document.getElementById('score').innerText = this.state.score.toLocaleString();
                 this.updateShopUI();
@@ -809,6 +844,10 @@
                 this.renderPopupRewardButton();
                 this.renderChannelBonusButton();
                 this.renderBusinesses();
+                this.renderBattlePassBanner();
+                if (document.getElementById('battlepass-view').classList.contains('active')) {
+                    this.renderBattlePassTrack();
+                }
             },
 
             updateCharacterUI() {
@@ -934,6 +973,7 @@
                     this.renderBusinesses();
                     this.startBusinessIncomeTicker();
                 }
+                if (viewName === 'battlepass') this.renderBattlePassTrack();
 
                 if (this.tg.HapticFeedback) this.tg.HapticFeedback.selectionChanged();
             },
@@ -1190,6 +1230,19 @@
                 }
 
                 this.applyUserState(result.user);
+
+                if (result.battlePass) {
+                    this.state.bpLevels = result.battlePass.levels || [];
+                    this.state.bpMaxLevel = result.battlePass.maxLevel || 100;
+                    this.state.bpPremiumPriceStars = result.battlePass.premiumPriceStars || 450;
+                    this.state.bpSeasonEndsAt = result.battlePass.seasonEndsAt || 0;
+                    this.renderBattlePassBanner();
+                    this.startBattlePassSeasonTimer();
+                }
+                if (result.shop) {
+                    this.state.coinPackages = result.shop.coinPackages || [];
+                    this.renderShopStars();
+                }
 
                 document.getElementById('manualRefBlock').style.display =
                     this.state.myReferrerId ? 'none' : 'block';
@@ -1754,6 +1807,182 @@
                     // Естественная пауза после колеса — раз в сутки, не раздражает
                     showInterstitialAd();
                 }, 3000);
+            },
+
+            // ===== Боевой пропуск =====
+
+            // Зеркало серверной формулы из api/battlepass-config.js — держать в синхроне,
+            // если меняются коэффициенты на сервере, поменять и здесь
+            bpPointsForLevel(level) {
+                return Math.round(300 + level * 60 + level * level * 3);
+            },
+            bpLevelFromPoints(points) {
+                let level = 0, acc = 0;
+                const maxLevel = this.state.bpMaxLevel || 100;
+                while (level < maxLevel) {
+                    const next = acc + this.bpPointsForLevel(level + 1);
+                    if (points < next) break;
+                    acc = next;
+                    level++;
+                }
+                return level;
+            },
+
+            renderBattlePassBanner() {
+                const labelEl = document.getElementById('bpLevelLabel');
+                const fillEl = document.getElementById('bpProgressFill');
+                if (!labelEl || !fillEl) return;
+
+                const maxLevel = this.state.bpMaxLevel || 100;
+                const level = this.bpLevelFromPoints(this.state.bpPoints || 0);
+                labelEl.innerText = `Մակարդակ ${level}/${maxLevel}${this.state.bpPremium ? ' 🎖' : ''}`;
+                fillEl.style.width = Math.min(100, Math.round((level / maxLevel) * 100)) + '%';
+            },
+
+            startBattlePassSeasonTimer() {
+                const el = document.getElementById('bpSeasonTimer');
+                if (!el || !this.state.bpSeasonEndsAt) return;
+                const update = () => {
+                    const msLeft = this.state.bpSeasonEndsAt - Date.now();
+                    if (msLeft <= 0) { el.innerText = 'Սեզոնը ավարտվում է...'; return; }
+                    const days = Math.floor(msLeft / (24 * 60 * 60 * 1000));
+                    const hours = Math.floor((msLeft % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
+                    el.innerText = `Սեզոնն ավարտվում է ${days} օր ${hours} ժամից`;
+                };
+                update();
+                clearInterval(this.bpSeasonTimerInterval);
+                this.bpSeasonTimerInterval = setInterval(update, 60000);
+            },
+
+            renderBattlePassTrack() {
+                const listEl = document.getElementById('battlePassList');
+                if (!listEl || !this.state.bpLevels) return;
+
+                const currentLevel = this.bpLevelFromPoints(this.state.bpPoints || 0);
+                const claimedFree = this.state.bpClaimedFree || [];
+                const claimedPremium = this.state.bpClaimedPremium || [];
+                const isPremium = this.state.bpPremium;
+
+                const premiumStatusEl = document.getElementById('bpPremiumStatus');
+                const premiumBtnEl = document.getElementById('bpBuyPremiumBtn');
+                const premiumPriceEl = document.getElementById('bpPremiumPriceLabel');
+                if (premiumPriceEl) premiumPriceEl.innerText = this.state.bpPremiumPriceStars || 450;
+                if (isPremium) {
+                    if (premiumStatusEl) premiumStatusEl.innerText = '🎖 Պրեմիում գիծը ակտիվ է այս սեզոնում';
+                    if (premiumBtnEl) premiumBtnEl.style.display = 'none';
+                } else {
+                    if (premiumStatusEl) premiumStatusEl.innerText = 'Բացեք պրեմիում գիծը՝ ստանալու համար ավելի մեծ մրցանակներ';
+                    if (premiumBtnEl) premiumBtnEl.style.display = 'block';
+                }
+
+                const renderCell = (level, track, reward) => {
+                    const claimed = (track === 'free' ? claimedFree : claimedPremium).includes(level);
+                    const locked = level > currentLevel;
+                    const needsPremium = track === 'premium' && !isPremium;
+
+                    let btnLabel, btnDisabled, btnClass = '';
+                    if (claimed) { btnLabel = '✅'; btnDisabled = true; btnClass = 'success-btn'; }
+                    else if (needsPremium) { btnLabel = '🔒'; btnDisabled = true; }
+                    else if (locked) { btnLabel = '🔒'; btnDisabled = true; }
+                    else { btnLabel = 'Ստանալ'; btnDisabled = false; btnClass = 'success-btn'; }
+
+                    const rewardText = `${reward.coins.toLocaleString()} 💰` + (reward.clickPower ? ` +${reward.clickPower}⚡` : '');
+
+                    return `
+                        <div style="flex:1; background:${track === 'premium' ? '#2c0a2c' : '#1c1c1e'}; border-radius:8px; padding:8px; text-align:center;">
+                            <p style="font-size:10px; color:#8e8e93; margin-bottom:4px;">${rewardText}</p>
+                            <button class="action-btn ${btnClass}" style="margin:0; padding:6px 10px; font-size:11px; width:100%;"
+                                ${btnDisabled ? 'disabled' : ''}
+                                onclick="app.claimBattlePassReward(${level}, '${track}')">${btnLabel}</button>
+                        </div>
+                    `;
+                };
+
+                listEl.innerHTML = this.state.bpLevels.map(lv => `
+                    <div class="card-item" style="flex-direction:column; align-items:stretch; gap:6px; ${lv.level <= currentLevel ? '' : 'opacity:0.6;'}">
+                        <h3 style="font-size:12px; margin:0;">Մակարդակ ${lv.level}</h3>
+                        <div style="display:flex; gap:6px;">
+                            ${renderCell(lv.level, 'free', lv.free)}
+                            ${renderCell(lv.level, 'premium', lv.premium)}
+                        </div>
+                    </div>
+                `).join('');
+            },
+
+            async claimBattlePassReward(level, track) {
+                const result = await this.callApi('claimBattlePassReward', { level, track });
+                if (!result.ok) {
+                    if (this.tg.showAlert) this.tg.showAlert('Այս մրցանակը հասանելի չէ:');
+                    if (result.user) this.applyUserState(result.user);
+                    return;
+                }
+
+                this.applyUserState(result.user);
+                if (this.tg.HapticFeedback) this.tg.HapticFeedback.notificationOccurred('success');
+                if (this.tg.showAlert) this.tg.showAlert(`🎉 +${result.reward.coins.toLocaleString()} 💰 ստացվեց!`);
+            },
+
+            // ===== Telegram Stars — Premium Pass և մետաղադրամների փաթեթներ =====
+
+            async requestInvoice(type, packageId) {
+                try {
+                    const res = await fetch('/api/payments', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ initData: this.tg.initData, type, packageId })
+                    });
+                    return await res.json();
+                } catch (e) {
+                    console.error('Payments error:', e);
+                    return { ok: false, error: 'network' };
+                }
+            },
+
+            openInvoiceAndRefresh(invoiceUrl) {
+                if (!this.tg.openInvoice) {
+                    window.open(invoiceUrl, '_blank');
+                    return;
+                }
+                this.tg.openInvoice(invoiceUrl, (status) => {
+                    if (status === 'paid') {
+                        if (this.tg.HapticFeedback) this.tg.HapticFeedback.notificationOccurred('success');
+                        // Начисление обрабатывает вебхук — даём ему секунду и обновляем состояние
+                        setTimeout(() => this.loadUserData(), 1200);
+                    }
+                });
+            },
+
+            async buyPremiumPass() {
+                const result = await this.requestInvoice('premium_pass');
+                if (!result.ok || !result.invoiceUrl) {
+                    if (this.tg.showAlert) this.tg.showAlert('Չհաջողվեց ստեղծել վճարումը: Փորձեք կրկին:');
+                    return;
+                }
+                this.openInvoiceAndRefresh(result.invoiceUrl);
+            },
+
+            async buyCoinPackage(packageId) {
+                const result = await this.requestInvoice('coins', packageId);
+                if (!result.ok || !result.invoiceUrl) {
+                    if (this.tg.showAlert) this.tg.showAlert('Չհաջողվեց ստեղծել վճարումը: Փորձեք կրկին:');
+                    return;
+                }
+                this.openInvoiceAndRefresh(result.invoiceUrl);
+            },
+
+            renderShopStars() {
+                const listEl = document.getElementById('coinPackagesList');
+                if (!listEl || !this.state.coinPackages) return;
+
+                listEl.innerHTML = this.state.coinPackages.map(pack => `
+                    <div class="card-item">
+                        <div class="card-info">
+                            <h3>${pack.label}</h3>
+                            <p>${pack.coins.toLocaleString()} 💰</p>
+                        </div>
+                        <button class="action-btn success-btn" onclick="app.buyCoinPackage('${pack.id}')">⭐ ${pack.stars}</button>
+                    </div>
+                `).join('');
             }
         };
 
