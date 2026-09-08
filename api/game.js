@@ -44,6 +44,19 @@ const CHANNEL_BONUS_COINS = 300000;
 // api/check-caps.js для проверки, у кого забит 3-часовой лимит
 const { BUSINESSES, MAX_OFFLINE_ACCRUAL_MS, calculateBusinessIncome } = require('./business-utils');
 
+// Боевой пропуск — сезон, уровни, награды, очки за действия
+const {
+  MAX_LEVEL: BP_MAX_LEVEL,
+  getCurrentSeason,
+  levelFromPoints,
+  rewardForLevel,
+  BP_POINTS_PER_CLICK,
+  BP_POINTS_PER_COLLECT,
+  BP_POINTS_DAILY_BASE,
+  PREMIUM_PASS_PRICE_STARS,
+  COIN_PACKAGES
+} = require('./battlepass-config');
+
 // Проверяем, что запрос действительно пришёл из Telegram и не подделан
 function verifyTelegramInitData(initData, botToken) {
   if (!initData || !botToken) return null;
@@ -146,10 +159,33 @@ module.exports = async function handler(req, res) {
         channel_bonus_claimed: false,
         businesses: [],
         last_business_collect: Date.now(),
-        cap_notified: false
+        cap_notified: false,
+        bp_points: 0,
+        bp_premium: false,
+        bp_claimed_free: [],
+        bp_claimed_premium: [],
+        bp_season: getCurrentSeason(Date.now()).seasonNumber
       }]).select().single();
       if (insertErr) throw insertErr;
       user = created;
+    }
+
+    // Боевой пропуск: сезон длится 30 дней и меняется автоматически по времени.
+    // Если у игрока в базе осталась отметка от старого сезона — сбрасываем
+    // прогресс прямо здесь, лениво, при первом же запросе в новом сезоне.
+    const { seasonNumber: currentSeason } = getCurrentSeason(Date.now());
+    if ((user.bp_season || 0) !== currentSeason) {
+      const { data: seasonReset, error: seasonErr } = await db.from('users')
+        .update({
+          bp_points: 0,
+          bp_premium: false,
+          bp_claimed_free: [],
+          bp_claimed_premium: [],
+          bp_season: currentSeason
+        })
+        .eq('telegram_id', telegramId).select().single();
+      if (seasonErr) throw seasonErr;
+      user = seasonReset;
     }
 
     switch (action) {
@@ -163,10 +199,27 @@ module.exports = async function handler(req, res) {
         const now = Date.now();
         const { earned: pendingBusinessIncome } = calculateBusinessIncome(user, now);
 
+        // Собираем таблицу уровней/наград Боевого пропуска — она детерминирована
+        // (одна и та же для всех), проще посчитать один раз здесь и отдать клиенту
+        const { seasonEndsAt } = getCurrentSeason(now);
+        const bpLevels = [];
+        for (let l = 1; l <= BP_MAX_LEVEL; l++) {
+          bpLevels.push({ level: l, free: rewardForLevel(l, 'free'), premium: rewardForLevel(l, 'premium') });
+        }
+
         return res.status(200).json({
           ok: true,
           user: { ...user, refCount: count || 0 },
-          pendingBusinessIncome
+          pendingBusinessIncome,
+          battlePass: {
+            maxLevel: BP_MAX_LEVEL,
+            seasonEndsAt,
+            premiumPriceStars: PREMIUM_PASS_PRICE_STARS,
+            levels: bpLevels
+          },
+          shop: {
+            coinPackages: COIN_PACKAGES
+          }
         });
       }
 
@@ -184,9 +237,10 @@ module.exports = async function handler(req, res) {
         const newBalance = (user.balance || 0) + earned;
         const newTotal = (user.total_earned || 0) + earned;
         const newXp = (user.xp || 0) + validClicks;
+        const newBpPoints = (user.bp_points || 0) + validClicks * BP_POINTS_PER_CLICK;
 
         const { data: updated, error: upErr } = await db.from('users')
-          .update({ balance: newBalance, total_earned: newTotal, xp: newXp, last_sync: now })
+          .update({ balance: newBalance, total_earned: newTotal, xp: newXp, last_sync: now, bp_points: newBpPoints })
           .eq('telegram_id', telegramId).select().single();
         if (upErr) throw upErr;
 
@@ -226,7 +280,8 @@ module.exports = async function handler(req, res) {
             total_earned: syncedTotal,
             xp: syncedXp,
             click_power: user.click_power + item.powerAdd,
-            last_sync: now
+            last_sync: now,
+            bp_points: (user.bp_points || 0) + validClicks * BP_POINTS_PER_CLICK
           })
           .eq('telegram_id', telegramId).select().single();
         if (upErr) throw upErr;
@@ -386,7 +441,13 @@ module.exports = async function handler(req, res) {
         if (insErr) throw insErr;
 
         const { data: updated, error: upErr } = await db.from('users')
-          .update({ balance: syncedBalance - coins, total_earned: syncedTotal, xp: syncedXp, last_sync: now })
+          .update({
+            balance: syncedBalance - coins,
+            total_earned: syncedTotal,
+            xp: syncedXp,
+            last_sync: now,
+            bp_points: (user.bp_points || 0) + validClicks * BP_POINTS_PER_CLICK
+          })
           .eq('telegram_id', telegramId)
           .gte('balance', coins - clickEarned) // атомарная защита от двух одновременных заявок
           .select().single();
@@ -440,13 +501,15 @@ module.exports = async function handler(req, res) {
         }
 
         const reward = DAILY_BONUS_REWARDS[newStreak - 1];
+        const bpReward = BP_POINTS_DAILY_BASE * newStreak;
 
         const { data: updated, error: upErr } = await db.from('users')
           .update({
             balance: user.balance + reward,
             total_earned: user.total_earned + reward,
             last_daily_claim: now,
-            daily_streak: newStreak
+            daily_streak: newStreak,
+            bp_points: (user.bp_points || 0) + bpReward
           })
           .eq('telegram_id', telegramId).select().single();
         if (upErr) throw upErr;
@@ -582,12 +645,54 @@ module.exports = async function handler(req, res) {
             balance: user.balance + earned,
             total_earned: user.total_earned + earned,
             last_business_collect: now,
-            cap_notified: false
+            cap_notified: false,
+            bp_points: (user.bp_points || 0) + BP_POINTS_PER_COLLECT
           })
           .eq('telegram_id', telegramId).select().single();
         if (upErr) throw upErr;
 
         return res.status(200).json({ ok: true, user: updated, collected: earned });
+      }
+
+      case 'claimBattlePassReward': {
+        const level = parseInt(payload && payload.level, 10);
+        const track = payload && payload.track;
+
+        if (!level || level < 1 || level > BP_MAX_LEVEL) {
+          return res.status(400).json({ ok: false, error: 'Bad level' });
+        }
+        if (track !== 'free' && track !== 'premium') {
+          return res.status(400).json({ ok: false, error: 'Bad track' });
+        }
+
+        const currentLevel = levelFromPoints(user.bp_points || 0);
+        if (level > currentLevel) {
+          return res.status(400).json({ ok: false, error: 'Level not reached', user });
+        }
+        if (track === 'premium' && !user.bp_premium) {
+          return res.status(400).json({ ok: false, error: 'Premium pass not owned', user });
+        }
+
+        const claimedField = track === 'premium' ? 'bp_claimed_premium' : 'bp_claimed_free';
+        const claimed = Array.isArray(user[claimedField]) ? user[claimedField] : [];
+        if (claimed.includes(level)) {
+          return res.status(400).json({ ok: false, error: 'Already claimed', user });
+        }
+
+        const reward = rewardForLevel(level, track);
+        const newClickPower = Math.min(MAX_POWER, (user.click_power || 1) + (reward.clickPower || 0));
+
+        const { data: updated, error: upErr } = await db.from('users')
+          .update({
+            balance: user.balance + reward.coins,
+            total_earned: user.total_earned + reward.coins,
+            click_power: newClickPower,
+            [claimedField]: [...claimed, level]
+          })
+          .eq('telegram_id', telegramId).select().single();
+        if (upErr) throw upErr;
+
+        return res.status(200).json({ ok: true, user: updated, reward, level, track });
       }
 
       default:
