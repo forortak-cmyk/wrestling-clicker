@@ -1,5 +1,5 @@
 const crypto = require('crypto');
-const { PREMIUM_PASS_PRICE_STARS, COIN_PACKAGES } = require('./battlepass-config');
+const { PREMIUM_PASS_PRICE_STARS, COIN_PACKAGES, QUICK_COIN_PACKAGES } = require('./battlepass-config');
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
 
@@ -60,10 +60,10 @@ module.exports = async function handler(req, res) {
     payload = JSON.stringify({ t: 'pass', u: tgUser.id });
     amountStars = PREMIUM_PASS_PRICE_STARS;
   } else if (type === 'coins') {
-    const pack = COIN_PACKAGES.find(p => p.id === packageId);
+    const pack = [...COIN_PACKAGES, ...QUICK_COIN_PACKAGES].find(p => p.id === packageId);
     if (!pack) return res.status(400).json({ ok: false, error: 'Unknown package' });
 
-    title = pack.label;
+    title = `💰 ${pack.coins.toLocaleString('ru-RU')} մետաղադրամ`;
     description = `${pack.coins.toLocaleString('ru-RU')} 💰 ուղղակիորեն ձեր հաշվին`;
     payload = JSON.stringify({ t: 'coins', u: tgUser.id, p: pack.id });
     amountStars = pack.stars;
