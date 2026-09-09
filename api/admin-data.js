@@ -105,6 +105,39 @@ module.exports = async function handler(req, res) {
       .sort((a, b) => b.referrals - a.referrals)
       .slice(0, 20);
 
+    // Покупки за Telegram Stars — берём напрямую из Bot API, отдельного
+    // хранения этих данных у нас нет, Telegram сам ведёт учёт транзакций
+    let purchases = [];
+    let totalStarsEarned = 0;
+    try {
+      const txRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getStarTransactions?limit=100`);
+      const txData = await txRes.json();
+      if (txData.ok) {
+        purchases = txData.result.transactions
+          .filter(t => t.source && t.source.type === 'user') // только входящие покупки, не выводы
+          .map(t => {
+            let label = 'Անհայտ գնում';
+            if (t.source.invoice_payload) {
+              try {
+                const payload = JSON.parse(t.source.invoice_payload);
+                if (payload.t === 'pass') label = '🎖 Premium Pass';
+                else if (payload.t === 'coins') label = `💰 Մետաղադրամներ (${payload.p})`;
+              } catch { /* payload не наш формат — оставляем как «неизвестно» */ }
+            }
+            const buyer = t.source.user || {};
+            const buyerName = [buyer.first_name, buyer.last_name].filter(Boolean).join(' ') || buyer.username || 'Խաղացող';
+
+            totalStarsEarned += t.amount;
+            return { id: t.id, amount: t.amount, date: t.date * 1000, buyerId: buyer.id, buyerName, label };
+          })
+          .sort((a, b) => b.date - a.date);
+      } else {
+        console.error('getStarTransactions failed:', txData);
+      }
+    } catch (e) {
+      console.error('getStarTransactions error:', e);
+    }
+
     return res.status(200).json({
       ok: true,
       stats: {
@@ -115,7 +148,9 @@ module.exports = async function handler(req, res) {
         perSponsor
       },
       vouchers: voucherLog,
-      leaderboard
+      leaderboard,
+      purchases,
+      totalStarsEarned
     });
   } catch (e) {
     console.error('Admin API error:', e);
