@@ -7,23 +7,34 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script type="text/javascript" src="https://cdn.tgads.space/assets/js/adexium-widget.min.js"></script>
     <script async src='//libtl.com/sdk.js' data-zone='11598709' data-sdk='show_11598709'></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-main: #151517;
-            --bg-header: #1c1c1e;
-            --border-color: #2c2c2e;
+            --bg-main: #0f0b09;
+            --bg-header: #1c1510;
+            --bg-header-2: #241a12;
+            --border-color: #3c2e1e;
             --text-main: #ffffff;
-            --text-muted: #8e8e93;
-            --accent-gold: #ffd700;
+            --text-muted: #a89880;
+            --accent-gold: #e8b13a;
+            --accent-gold-bright: #ffd875;
+            --accent-primary: #d62839;
+            --accent-primary-dark: #a01b28;
             --accent-green: #34c759;
-            --accent-blue: #0a84ff;
             --accent-red: #ff3b30;
+            --font-display: 'Bebas Neue', 'Inter', sans-serif;
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        h2, h3 { font-family: var(--font-display); letter-spacing: 0.3px; font-weight: 400; }
 
         body {
             background-color: var(--bg-main);
+            background-image:
+                radial-gradient(ellipse 700px 400px at 50% -10%, rgba(232, 177, 58, 0.16) 0%, transparent 60%),
+                radial-gradient(ellipse 90% 70% at 50% 50%, transparent 40%, rgba(0, 0, 0, 0.55) 100%);
             color: var(--text-main);
             height: 100vh;
             display: flex;
@@ -35,15 +46,26 @@
 
         /* Header */
         .header {
-            padding: 20px 10px 15px;
+            padding: 18px 10px 14px;
             text-align: center;
-            background: var(--bg-header);
-            border-bottom: 1px solid var(--border-color);
+            background: linear-gradient(180deg, var(--bg-header-2) 0%, var(--bg-header) 100%);
+            border-bottom: 2px solid var(--accent-gold);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
             flex-shrink: 0;
             z-index: 2;
         }
-        .user-name { font-size: 13px; color: var(--text-muted); margin-bottom: 4px; }
-        .balance-box { font-size: 32px; font-weight: 800; color: var(--accent-gold); }
+        .user-name { font-size: 12px; color: var(--text-muted); margin-bottom: 2px; letter-spacing: 0.3px; }
+        .balance-box {
+            font-family: var(--font-display);
+            font-size: 42px;
+            letter-spacing: 1px;
+            font-weight: 400;
+            background: linear-gradient(180deg, var(--accent-gold-bright) 20%, var(--accent-gold) 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 0 2px 18px rgba(232, 177, 58, 0.35);
+        }
 
         /* Content Area */
         .content {
@@ -75,11 +97,11 @@
         /* Decorative background elements */
         .bg-decor-circle {
             position: absolute;
-            width: 260px;
-            height: 260px;
+            width: 280px;
+            height: 280px;
             border-radius: 50%;
-            background: radial-gradient(circle, rgba(10, 132, 255, 0.08) 0%, transparent 70%);
-            top: 15%;
+            background: radial-gradient(circle, rgba(232, 177, 58, 0.14) 0%, transparent 70%);
+            top: 12%;
             left: 50%;
             transform: translateX(-50%);
             z-index: 0;
@@ -94,7 +116,7 @@
             height: 100%;
             background-image: radial-gradient(var(--border-color) 1px, transparent 1px);
             background-size: 24px 24px;
-            opacity: 0.3;
+            opacity: 0.35;
             z-index: 0;
             pointer-events: none;
         }
@@ -111,7 +133,7 @@
         .coin {
             width: 200px;
             height: 200px;
-            background: transparent;
+            background: radial-gradient(circle at 50% 38%, rgba(255, 216, 117, 0.28) 0%, rgba(232, 177, 58, 0.08) 55%, transparent 70%);
             border-radius: 50%;
             display: flex;
             flex-direction: column;
@@ -120,9 +142,15 @@
             font-size: 26px;
             font-weight: 900;
             color: #3d2b00;
-            box-shadow: 0 10px 30px rgba(255, 215, 0, 0.35);
+            box-shadow:
+                0 0 0 3px var(--accent-gold),
+                0 0 0 6px rgba(0, 0, 0, 0.5),
+                inset 0 6px 14px rgba(255, 255, 255, 0.12),
+                inset 0 -10px 20px rgba(0, 0, 0, 0.35),
+                0 16px 34px rgba(0, 0, 0, 0.55),
+                0 0 40px rgba(232, 177, 58, 0.35);
             cursor: pointer;
-            transition: transform 0.05s ease-out;
+            transition: transform 0.05s ease-out, box-shadow 0.15s ease-out;
             -webkit-tap-highlight-color: transparent;
             overflow: hidden;
         }
@@ -134,12 +162,23 @@
             user-select: none;
             -webkit-user-drag: none;
         }
-        .coin:active { transform: scale(0.92); }
-        .coin-sub { font-size: 12px; font-weight: bold; margin-top: 5px; opacity: 0.8; }
+        .coin:active,
+        .coin.impact {
+            transform: scale(0.92);
+            box-shadow:
+                0 0 0 3px var(--accent-gold-bright),
+                0 0 0 6px rgba(0, 0, 0, 0.5),
+                inset 0 6px 14px rgba(255, 255, 255, 0.2),
+                inset 0 -10px 20px rgba(0, 0, 0, 0.3),
+                0 10px 24px rgba(0, 0, 0, 0.5),
+                0 0 60px rgba(255, 216, 117, 0.65);
+        }
+        .coin-sub { font-family: var(--font-display); font-size: 15px; letter-spacing: 0.5px; color: var(--accent-gold); margin-top: 6px; opacity: 0.9; }
 
         .level-badge {
-            font-size: 15px;
-            font-weight: 800;
+            font-family: var(--font-display);
+            font-size: 19px;
+            letter-spacing: 0.5px;
             color: var(--accent-gold);
             margin-bottom: 8px;
             text-align: center;
@@ -150,12 +189,13 @@
             background: var(--bg-header);
             border: 1px solid var(--border-color);
             border-radius: 6px;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
             overflow: hidden;
             margin-top: 10px;
         }
         .xp-bar-fill {
             height: 100%;
-            background: linear-gradient(90deg, #ffd700, #ff9d00);
+            background: linear-gradient(90deg, var(--accent-primary), var(--accent-gold));
             border-radius: 6px 0 0 6px;
             transition: width 0.3s ease-out;
             width: 0%;
@@ -170,48 +210,69 @@
         .list-container { width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 10px; padding-bottom: 20px; }
 
         .card-item {
-            background: var(--bg-header);
+            background: linear-gradient(135deg, var(--bg-header-2) 0%, var(--bg-header) 100%);
             border: 1px solid var(--border-color);
-            border-radius: 14px;
+            border-left: 3px solid var(--accent-gold);
+            border-radius: 4px 14px 14px 4px;
             padding: 12px 15px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05);
         }
         .card-info { flex: 1; }
-        .card-info h3 { font-size: 15px; margin-bottom: 2px; }
+        .card-info h3 { font-family: var(--font-display); font-size: 17px; letter-spacing: 0.3px; margin-bottom: 2px; }
         .card-info p { font-size: 12px; color: var(--text-muted); }
         .card-info .cost { color: var(--accent-gold); margin-top: 2px; }
 
         .action-btn {
-            background: var(--accent-blue);
+            position: relative;
+            background: linear-gradient(180deg, #ea3348 0%, var(--accent-primary) 45%, var(--accent-primary-dark) 100%);
             color: white;
             border: none;
+            border-bottom: 3px solid #6e0f18;
             padding: 8px 14px;
             border-radius: 8px;
             font-weight: bold;
             font-size: 12px;
             cursor: pointer;
-            transition: background 0.2s;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+            transition: filter 0.15s, transform 0.08s, box-shadow 0.08s;
             margin-left: 10px;
         }
-        .action-btn:active { background: #0062cc; }
-        .action-btn:disabled { background: #3a3a3c; color: var(--text-muted); cursor: not-allowed; }
-        .action-btn.success-btn { background: var(--accent-green); }
+        .action-btn:active {
+            filter: brightness(0.92);
+            transform: translateY(2px);
+            border-bottom-width: 1px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+        .action-btn:disabled {
+            background: #2a2016;
+            color: var(--text-muted);
+            cursor: not-allowed;
+            border-bottom-color: #1a1410;
+            box-shadow: none;
+        }
+        .action-btn.success-btn {
+            background: linear-gradient(180deg, #ffe9ad 0%, var(--accent-gold) 45%, #b3801f 100%);
+            color: #2a1a00;
+            border-bottom-color: #6b4a10;
+        }
 
         /* Referrals */
         .ref-banner {
             width: 100%;
             max-width: 400px;
-            background: linear-gradient(135deg, var(--bg-header) 0%, var(--border-color) 100%);
-            border: 1px solid #3a3a3c;
+            background: linear-gradient(135deg, var(--bg-header-2) 0%, var(--bg-header) 100%);
+            border: 1px solid var(--border-color);
             border-radius: 16px;
             padding: 16px;
             margin-bottom: 15px;
             text-align: center;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
         }
-        .ref-banner h2 { font-size: 18px; margin-bottom: 6px; }
-        .ref-banner p { font-size: 13px; color: #aaa; line-height: 1.4; }
+        .ref-banner h2 { font-family: var(--font-display); font-size: 22px; letter-spacing: 0.3px; margin-bottom: 6px; }
+        .ref-banner p { font-size: 13px; color: #c9b8a3; line-height: 1.4; }
         .ref-bonus-highlight { color: var(--accent-gold); font-weight: bold; }
 
         .ref-stats-grid {
@@ -223,14 +284,16 @@
             margin-bottom: 15px;
         }
         .stat-card {
-            background: var(--bg-header);
+            background: linear-gradient(180deg, var(--bg-header-2) 0%, var(--bg-header) 100%);
             border: 1px solid var(--border-color);
+            border-top: 2px solid var(--accent-gold);
             border-radius: 12px;
             padding: 12px;
             text-align: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
         }
         .stat-card .title { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
-        .stat-card .value { font-size: 16px; font-weight: bold; }
+        .stat-card .value { font-family: var(--font-display); font-size: 20px; letter-spacing: 0.3px; }
 
         .ref-input-group {
             display: flex;
@@ -271,21 +334,23 @@
             transition: 0.2s;
         }
         .business-nav-btn.active {
-            background: var(--accent-blue);
+            background: linear-gradient(180deg, #ea3348 0%, var(--accent-primary) 100%);
             color: white;
-            border-color: var(--accent-blue);
+            border-color: var(--accent-primary);
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3);
         }
         .sponsor-card {
-            background: var(--bg-header);
+            background: linear-gradient(180deg, var(--bg-header-2) 0%, var(--bg-header) 100%);
             border: 1px solid var(--border-color);
             border-radius: 14px;
             padding: 15px;
             margin-bottom: 10px;
             width: 100%;
             max-width: 400px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
         }
-        .sponsor-card h3 { font-size: 16px; color: var(--accent-gold); margin-bottom: 6px; }
-        .sponsor-card p.desc { font-size: 12px; color: #aaa; margin-bottom: 12px; line-height: 1.3; }
+        .sponsor-card h3 { font-family: var(--font-display); font-size: 18px; color: var(--accent-gold); margin-bottom: 6px; }
+        .sponsor-card p.desc { font-size: 12px; color: #c9b8a3; margin-bottom: 12px; line-height: 1.3; }
         .sponsor-row { display: flex; justify-content: space-between; align-items: center; }
         .sponsor-price { font-weight: bold; font-size: 15px; color: white; }
 
@@ -299,6 +364,7 @@
             max-width: 400px;
             position: relative;
             overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
         }
         .voucher-card h3 { font-size: 16px; color: var(--accent-green); margin-bottom: 4px; }
         .voucher-code { font-family: monospace; font-size: 18px; color: var(--accent-gold); font-weight: bold; margin: 8px 0; letter-spacing: 1px; }
@@ -307,7 +373,7 @@
         .roulette-container {
             width: 100%;
             max-width: 400px;
-            background: var(--bg-header);
+            background: linear-gradient(135deg, var(--bg-header-2) 0%, var(--bg-header) 100%);
             border: 1px solid var(--border-color);
             border-radius: 16px;
             padding: 15px;
@@ -315,14 +381,16 @@
             position: relative;
             z-index: 1;
             margin-bottom: 20px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
         }
         .roulette-wheel {
             width: 90px;
             height: 90px;
             margin: 0 auto 10px;
             border-radius: 50%;
-            background: radial-gradient(circle, #2c2c2e, #1c1c1e);
+            background: radial-gradient(circle at 50% 35%, var(--bg-header-2), var(--bg-header));
             border: 3px solid var(--accent-gold);
+            box-shadow: 0 0 20px rgba(232, 177, 58, 0.25), inset 0 4px 10px rgba(255, 255, 255, 0.1), inset 0 -6px 12px rgba(0, 0, 0, 0.4), 0 6px 14px rgba(0, 0, 0, 0.45);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -330,8 +398,9 @@
             transition: transform 3s cubic-bezier(0.15, 0.9, 0.2, 1);
         }
         .roulette-result {
-            font-size: 14px;
-            font-weight: bold;
+            font-family: var(--font-display);
+            font-size: 16px;
+            letter-spacing: 0.3px;
             color: var(--accent-gold);
             margin-bottom: 10px;
             min-height: 20px;
@@ -347,8 +416,9 @@
             display: flex;
             justify-content: space-around;
             align-items: center;
-            background: var(--bg-header);
-            border-top: 1px solid var(--border-color);
+            background: linear-gradient(0deg, var(--bg-header-2) 0%, var(--bg-header) 100%);
+            border-top: 2px solid var(--accent-gold);
+            box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.5);
             padding: 8px 4px 12px;
             flex-shrink: 0;
             z-index: 2;
@@ -369,7 +439,7 @@
             padding: 0 1px;
         }
         .nav-btn .icon { font-size: 18px; }
-        .nav-btn.active { color: var(--accent-blue); font-weight: bold; }
+        .nav-btn.active { color: var(--accent-gold); font-weight: bold; }
     </style>
 </head>
 <body>
@@ -389,7 +459,7 @@
             <p style="margin-bottom: 15px; font-size: 12px; color: var(--accent-red);">Առավելագույն ուժը՝ մինչև 750 միավոր մեկ սեղմման համար</p>
 
             <div class="list-container">
-                <div class="card-item" style="flex-direction: column; align-items: stretch; border-color: var(--accent-blue);">
+                <div class="card-item" style="flex-direction: column; align-items: stretch; border-color: var(--accent-primary);">
                     <div class="card-info" style="margin-bottom: 10px;">
                         <h3 id="activeShopName">Բեռնվում է...</h3>
                         <p>Ընթացիկ ուժը՝ <span class="currentPowerDisplay">1</span> / 750</p>
@@ -399,10 +469,10 @@
                 </div>
             </div>
 
-            <h3 style="font-size: 13px; color: #8e8e93; margin: 15px 0 8px;">Բոլոր մարզադահլիճները՝</h3>
+            <h3 style="font-size: 13px; color: var(--text-muted); margin: 15px 0 8px;">Բոլոր մարզադահլիճները՝</h3>
             <div class="list-container" id="shopTiersList"></div>
 
-            <h3 style="font-size: 13px; color: #8e8e93; margin: 20px 0 8px;">💎 Գնել մետաղադրամներ ⭐-ով</h3>
+            <h3 style="font-size: 13px; color: var(--text-muted); margin: 20px 0 8px;">💎 Գնել մետաղադրամներ ⭐-ով</h3>
             <div class="list-container" id="coinPackagesList">Բեռնվում է...</div>
         </div>
 
@@ -413,10 +483,10 @@
                 <p>Յուրաքանչյուր հրավիրված ընկերոջ համար ստացե՛ք <span class="ref-bonus-highlight">+10,000 💰</span></p>
                 <p>Ինչպես նաև նրանց վաստակի <span class="ref-bonus-highlight">10%-ը</span>:</p>
             </div>
-            <div class="ref-banner" style="background: #2c2c2e; padding: 12px;">
-                <h3 style="font-size: 13px; color: #8e8e93; margin-bottom: 5px; text-align: left;">Ձեր ID-ն:</h3>
+            <div class="ref-banner" style="background: var(--bg-header-2); padding: 12px;">
+                <h3 style="font-size: 13px; color: var(--text-muted); margin-bottom: 5px; text-align: left;">Ձեր ID-ն:</h3>
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <span id="myIdDisplay" style="font-size: 20px; font-weight: bold; color: #ffd700;">Բեռնվում է...</span>
+                    <span id="myIdDisplay" style="font-size: 20px; font-weight: bold; color: var(--accent-gold);">Բեռնվում է...</span>
                     <button class="action-btn" onclick="app.copyMyId()" style="margin: 0;">Պատճենել</button>
                 </div>
             </div>
@@ -442,7 +512,7 @@
                 Ստանալ բոնուսը
             </button>
             <div class="list-container">
-                <h3 style="font-size: 14px; color: #8e8e93; margin-bottom: 5px;">Ձեր հղումով միացած օգտատերերը՝</h3>
+                <h3 style="font-size: 14px; color: var(--text-muted); margin-bottom: 5px;">Ձեր հղումով միացած օգտատերերը՝</h3>
                 <div id="refList">Բեռնվում է...</div>
             </div>
         </div>
@@ -466,23 +536,23 @@
             <div class="bg-decor-grid"></div>
             <div class="bg-decor-circle"></div>
 
-            <div id="battlePassBanner" style="width:100%; max-width:400px; position:relative; z-index:1; margin-bottom:15px; background: linear-gradient(135deg, #2c0a2c 0%, #1c1c1e 100%); border: 1px solid #b967ff; border-radius: 16px; padding: 14px 16px; cursor:pointer;" onclick="app.switchView('battlepass', null)">
+            <div id="battlePassBanner" style="width:100%; max-width:400px; position:relative; z-index:1; margin-bottom:15px; background: linear-gradient(135deg, var(--bg-header-2) 0%, var(--bg-header) 100%); border: 1px solid var(--accent-primary); border-radius: 16px; padding: 14px 16px; cursor:pointer;" onclick="app.switchView('battlepass', null)">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                    <h3 style="font-size:14px; color:#c98bff; margin:0;">🎖 Մարտական անցագիր</h3>
-                    <span id="bpLevelLabel" style="font-size:12px; color:#ddd;">Մակարդակ 0/100</span>
+                    <h3 style="font-size:16px; color:var(--accent-gold); margin:0;">🎖 Մարտական անցագիր</h3>
+                    <span id="bpLevelLabel" style="font-size:12px; color: var(--text-muted);">Մակարդակ 0/100</span>
                 </div>
-                <div style="background:#0c0c0e; border-radius:8px; height:8px; overflow:hidden;">
-                    <div id="bpProgressFill" style="height:100%; width:0%; background:linear-gradient(90deg,#b967ff,#ff6ec7); transition: width .3s;"></div>
+                <div style="background:#0c0906; border-radius:8px; height:8px; overflow:hidden;">
+                    <div id="bpProgressFill" style="height:100%; width:0%; background:linear-gradient(90deg,var(--accent-primary),var(--accent-gold)); transition: width .3s;"></div>
                 </div>
             </div>
 
-            <div style="width:100%; max-width:400px; position:relative; z-index:1; margin-bottom:15px; background: linear-gradient(135deg, #2c1e0a 0%, #1c1c1e 100%); border: 1px solid var(--accent-gold); border-radius: 16px; padding: 14px 16px; text-align:center;">
+            <div style="width:100%; max-width:400px; position:relative; z-index:1; margin-bottom:15px; background: linear-gradient(135deg, var(--bg-header-2) 0%, var(--bg-header) 100%); border: 1px solid var(--accent-gold); border-radius: 16px; padding: 14px 16px; text-align:center;">
                 <h3 style="font-size:15px; color: var(--accent-gold); margin-bottom:6px;">🏆 Մրցույթ</h3>
-                <p style="font-size:12px; color:#ddd; line-height:1.4;">Ով 3 օրում կհրավիրի ամենաշատ ընկերներին, կստանա <span style="color: var(--accent-gold); font-weight:bold;">1000 ֏</span>!</p>
+                <p style="font-size:12px; color: var(--text-muted); line-height:1.4;">Ով 3 օրում կհրավիրի ամենաշատ ընկերներին, կստանա <span style="color: var(--accent-gold); font-weight:bold;">1000 ֏</span>!</p>
             </div>
 
-            <div id="floatingCollectBanner" style="display: none; width:100%; max-width:400px; position:relative; z-index:1; margin-bottom:15px; background: linear-gradient(135deg, #0a2c1e 0%, #1c1c1e 100%); border: 1px solid var(--accent-green); border-radius: 16px; padding: 14px 16px; text-align:center;">
-                <p style="font-size:13px; color:#ddd; margin-bottom:8px;">🏢 Ձեր բիզնեսները վաստակել են <span id="floatingCollectAmount" style="color: var(--accent-green); font-weight:bold;">0</span> 💰</p>
+            <div id="floatingCollectBanner" style="display: none; width:100%; max-width:400px; position:relative; z-index:1; margin-bottom:15px; background: linear-gradient(135deg, #0a2c1e 0%, var(--bg-header) 100%); border: 1px solid var(--accent-green); border-radius: 16px; padding: 14px 16px; text-align:center;">
+                <p style="font-size:13px; color: var(--text-muted); margin-bottom:8px;">🏢 Ձեր բիզնեսները վաստակել են <span id="floatingCollectAmount" style="color: var(--accent-green); font-weight:bold;">0</span> 💰</p>
                 <button class="action-btn success-btn" style="width:100%; margin:0; padding:10px;" onclick="app.collectBusinessIncome()">Հավաքել</button>
             </div>
 
@@ -517,17 +587,17 @@
                 <p style="font-size: 13px;">Նվազագույն հայտը՝ <span class="ref-bonus-highlight">750 ֏</span> (250,000,000 💰)</p>
             </div>
 
-            <div class="ref-banner" style="background: #2c2c2e; text-align: left; padding: 16px;">
+            <div class="ref-banner" style="background: var(--bg-header-2); text-align: left; padding: 16px;">
                 <h3 style="font-size: 15px; margin-bottom: 10px;">Հայտ գումարի հանման համար</h3>
 
-                <p style="font-size: 12px; color: #8e8e93; margin-bottom: 4px;">Հանվող մետաղադրամներ</p>
+                <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Հանվող մետաղադրամներ</p>
                 <input type="number" id="withdrawCoinsInput" class="ref-input" placeholder="Օրինակ՝ 250000000" style="width: 100%; margin-bottom: 4px;">
                 <p style="font-size: 13px; color: var(--accent-gold); font-weight: bold; margin-bottom: 12px;" id="withdrawAmdPreview">= 0 ֏</p>
 
-                <p style="font-size: 12px; color: #8e8e93; margin-bottom: 4px;">Անուն Ազգանուն (քարտի վրա)</p>
+                <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Անուն Ազգանուն (քարտի վրա)</p>
                 <input type="text" id="withdrawNameInput" class="ref-input" placeholder="Օրինակ՝ Արամ Առաքելյան" style="width: 100%; margin-bottom: 12px;">
 
-                <p style="font-size: 12px; color: #8e8e93; margin-bottom: 4px;">Քարտի համարը</p>
+                <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Քարտի համարը</p>
                 <input type="text" id="withdrawCardInput" class="ref-input" placeholder="XXXX XXXX XXXX XXXX" inputmode="numeric" style="width: 100%; margin-bottom: 14px;">
 
                 <button class="action-btn success-btn" style="width: 100%; margin: 0; padding: 12px;" onclick="app.submitWithdrawal()">Ուղարկել հայտը</button>
@@ -535,7 +605,7 @@
             </div>
 
             <div class="list-container">
-                <h3 style="font-size: 14px; color: #8e8e93; margin-bottom: 5px;">Ձեր հայտերը՝</h3>
+                <h3 style="font-size: 14px; color: var(--text-muted); margin-bottom: 5px;">Ձեր հայտերը՝</h3>
                 <div id="withdrawalHistoryList">Բեռնվում է...</div>
             </div>
         </div>
@@ -553,21 +623,21 @@
 
             <div class="ref-banner" style="text-align: left; padding: 16px;">
                 <h3 style="font-size: 15px; margin-bottom: 6px;">🎬 Դիտիր գովազդ</h3>
-                <p style="font-size: 12px; color: #aaa; margin-bottom: 12px;">Յուրաքանչյուր դիտման համար՝ <span class="ref-bonus-highlight">+30,000 💰</span></p>
+                <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">Յուրաքանչյուր դիտման համար՝ <span class="ref-bonus-highlight">+30,000 💰</span></p>
                 <button class="action-btn success-btn" id="watchAdBtn" style="width: 100%; margin: 0; padding: 12px;" onclick="app.watchAdForCoins()">Դիտել գովազդ</button>
                 <p id="watchAdMsg" style="font-size: 11px; color: var(--text-muted); margin-top: 8px; text-align: center;"></p>
             </div>
 
             <div class="ref-banner" style="text-align: left; padding: 16px;">
                 <h3 style="font-size: 15px; margin-bottom: 6px;">🎯 Անցիր հատուկ առաջարկին</h3>
-                <p style="font-size: 12px; color: #aaa; margin-bottom: 12px;">Անցման համար՝ <span class="ref-bonus-highlight">+30,000 💰</span></p>
+                <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">Անցման համար՝ <span class="ref-bonus-highlight">+30,000 💰</span></p>
                 <button class="action-btn success-btn" id="popupRewardBtn" style="width: 100%; margin: 0; padding: 12px;" onclick="app.claimPopupReward()">Ստանալ</button>
                 <p id="popupRewardMsg" style="font-size: 11px; color: var(--text-muted); margin-top: 8px; text-align: center;"></p>
             </div>
 
             <div class="ref-banner" style="text-align: left; padding: 16px;">
                 <h3 style="font-size: 15px; margin-bottom: 6px;">📢 Բաժանորդագրվիր մեր ալիքին</h3>
-                <p style="font-size: 12px; color: #aaa; margin-bottom: 12px;">Ստացիր <span class="ref-bonus-highlight">+300,000 💰</span> բաժանորդագրության համար (մեկանգամյա)</p>
+                <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">Ստացիր <span class="ref-bonus-highlight">+300,000 💰</span> բաժանորդագրության համար (մեկանգամյա)</p>
                 <button class="action-btn" style="width: 100%; margin: 0 0 8px 0; padding: 10px;" onclick="app.openChannel()">📢 Բացել ալիքը</button>
                 <button class="action-btn success-btn" id="channelBonusBtn" style="width: 100%; margin: 0; padding: 12px;" onclick="app.claimChannelBonus()">✅ Ստուգել և ստանալ</button>
                 <p id="channelBonusMsg" style="font-size: 11px; color: var(--text-muted); margin-top: 8px; text-align: center;"></p>
@@ -595,11 +665,11 @@
         <div id="battlepass-view" class="view">
             <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
                 <button class="action-btn" style="margin:0; padding:8px 12px;" onclick="app.switchView('main', document.getElementById('navMainBtn'))">← Ետ</button>
-                <h2 style="font-size: 18px; margin: 0; color: #c98bff;">🎖 Մարտական անցագիր</h2>
+                <h2 style="font-size: 20px; margin: 0; color: var(--accent-gold);">🎖 Մարտական անցագիր</h2>
             </div>
             <p id="bpSeasonTimer" style="font-size: 11px; color: var(--text-muted); margin-bottom: 10px;">Սեզոնը մնում է հաշվարկվում...</p>
 
-            <div id="bpPremiumBanner" class="ref-banner" style="text-align:center; padding:14px; margin-bottom:12px; border-color:#b967ff;">
+            <div id="bpPremiumBanner" class="ref-banner" style="text-align:center; padding:14px; margin-bottom:12px; border-color:var(--accent-primary);">
                 <p id="bpPremiumStatus" style="font-size:13px; margin-bottom:8px;">Պրեմիում գիծը կողպված է</p>
                 <button class="action-btn success-btn" id="bpBuyPremiumBtn" style="width:100%; margin:0; padding:10px;" onclick="app.buyPremiumPass()">
                     🎖 Ակտիվացնել Պրեմիում ⭐ <span id="bpPremiumPriceLabel">450</span>
@@ -880,8 +950,14 @@
             },
 
             setupEventListeners() {
-                document.getElementById('coinBtn').addEventListener('click', () => {
+                document.getElementById('coinBtn').addEventListener('click', (e) => {
                     this.performClick(true);
+                    const coinEl = e.currentTarget;
+                    coinEl.classList.remove('impact');
+                    void coinEl.offsetWidth; // форсируем reflow, чтобы анимация перезапустилась при частых кликах
+                    coinEl.classList.add('impact');
+                    clearTimeout(this._impactTimeout);
+                    this._impactTimeout = setTimeout(() => coinEl.classList.remove('impact'), 150);
                 });
 
                 document.addEventListener('visibilitychange', () => {
@@ -1143,7 +1219,7 @@
                     if (this.state.clickPower > tier.to) {
                         statusHtml = `<span style="color: var(--accent-green); font-size: 12px; font-weight: bold;">✅ Ավարտված</span>`;
                     } else if (this.state.clickPower >= tier.from) {
-                        statusHtml = `<span style="color: var(--accent-blue); font-size: 12px; font-weight: bold;">▶ Ընթացիկ</span>`;
+                        statusHtml = `<span style="color: var(--accent-gold); font-size: 12px; font-weight: bold;">▶ Ընթացիկ</span>`;
                     } else {
                         statusHtml = `<span style="color: var(--text-muted); font-size: 12px;">🔒 ${tier.from} ուժից</span>`;
                     }
@@ -1433,7 +1509,7 @@
                         style = 'background: rgba(52,199,89,0.15); border: 1px solid var(--accent-green); color: var(--accent-green);';
                         label = '✅';
                     } else if (day === nextClaimDay) {
-                        style = 'background: rgba(10,132,255,0.15); border: 1px solid var(--accent-blue); color: var(--accent-blue);';
+                        style = 'background: rgba(232,177,58,0.15); border: 1px solid var(--accent-gold); color: var(--accent-gold);';
                         label = '▶';
                     } else {
                         style = 'background: var(--bg-header); border: 1px solid var(--border-color); color: var(--text-muted);';
@@ -1889,8 +1965,8 @@
                     const rewardText = `${reward.coins.toLocaleString()} 💰` + (reward.clickPower ? ` +${reward.clickPower}⚡` : '');
 
                     return `
-                        <div style="flex:1; background:${track === 'premium' ? '#2c0a2c' : '#1c1c1e'}; border-radius:8px; padding:8px; text-align:center;">
-                            <p style="font-size:10px; color:#8e8e93; margin-bottom:4px;">${rewardText}</p>
+                        <div style="flex:1; background:${track === 'premium' ? 'rgba(214,40,57,0.14)' : 'var(--bg-header-2)'}; border-radius:8px; padding:8px; text-align:center;">
+                            <p style="font-size:10px; color:var(--text-muted); margin-bottom:4px;">${rewardText}</p>
                             <button class="action-btn ${btnClass}" style="margin:0; padding:6px 10px; font-size:11px; width:100%;"
                                 ${btnDisabled ? 'disabled' : ''}
                                 onclick="app.claimBattlePassReward(${level}, '${track}')">${btnLabel}</button>
