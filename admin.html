@@ -24,6 +24,7 @@
   .send-btn:disabled { background:#3a3a3c; color:#8e8e93; cursor:not-allowed; }
   .broadcast-msg { font-size:12px; margin-top:8px; font-weight:bold; }
   tr.gold td { color:#ffd700; font-weight:bold; }
+  .purchase-amount { color:#ffd700; font-weight:bold; }
 </style>
 </head>
 <body>
@@ -74,6 +75,15 @@ async function load() {
         <td>${l.referrals}</td>
       </tr>`).join('');
 
+    const purchases = data.purchases || [];
+    const purchaseRows = purchases.map(p => `
+      <tr>
+        <td>${p.buyerName}<br><span class="sub">ID: ${p.buyerId || '—'}</span></td>
+        <td>${p.label}</td>
+        <td class="purchase-amount">⭐ ${p.amount}</td>
+        <td>${new Date(p.date).toLocaleString('ru-RU')}</td>
+      </tr>`).join('');
+
     contentEl.className = '';
     contentEl.innerHTML = `
       <div class="stats-grid">
@@ -81,12 +91,20 @@ async function load() {
         <div class="stat-card"><div class="title">Ваучеров куплено</div><div class="value">${s.totalVouchers}</div></div>
         <div class="stat-card"><div class="title">Суммарно заработано</div><div class="value">${s.totalEarned.toLocaleString()} 💰</div></div>
         <div class="stat-card"><div class="title">Суммарный баланс</div><div class="value">${s.totalBalance.toLocaleString()} 💰</div></div>
+        <div class="stat-card"><div class="title">Всего Stars получено</div><div class="value">⭐ ${(data.totalStarsEarned || 0).toLocaleString()}</div></div>
+        <div class="stat-card"><div class="title">Покупок за Stars</div><div class="value">${purchases.length}</div></div>
       </div>
 
       <h2>🏆 Лидерборд конкурса (по рефералам)</h2>
       <table>
         <thead><tr><th>#</th><th>Игрок</th><th>Рефералов</th></tr></thead>
         <tbody>${leaderboardRows || '<tr><td colspan="3">Пока пусто</td></tr>'}</tbody>
+      </table>
+
+      <h2>⭐ Покупки за Telegram Stars</h2>
+      <table>
+        <thead><tr><th>Игрок</th><th>Что купил</th><th>Сумма</th><th>Дата</th></tr></thead>
+        <tbody>${purchaseRows || '<tr><td colspan="4">Пока пусто</td></tr>'}</tbody>
       </table>
 
       <h2>📢 Рассылка всем игрокам</h2>
