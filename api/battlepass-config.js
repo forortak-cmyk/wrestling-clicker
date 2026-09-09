@@ -16,6 +16,16 @@ const COIN_PACKAGES = [
   { id: 'coins_ultra', stars: 2000, coins: 2000000000, label: '👑 Ուլտրա փաթեթ (լավագույն արժեքը)' }
 ];
 
+// Маленькие "быстрые" комбо для ненавязчивой кнопки прямо на главном экране —
+// специально скромнее по выгоде, чем полные пакеты в Магазине (это нормально:
+// они для импульсивной покупки на ходу, а не основной способ доната)
+const QUICK_COIN_PACKAGES = [
+  { id: 'quick_10', stars: 10, coins: 150000, label: '10 ⭐' },
+  { id: 'quick_25', stars: 25, coins: 500000, label: '25 ⭐' },
+  { id: 'quick_50', stars: 50, coins: 1200000, label: '50 ⭐' },
+  { id: 'quick_100', stars: 100, coins: 3000000, label: '100 ⭐' }
+];
+
 // Очки боевого пропуска (BP) за игровые действия
 const BP_POINTS_PER_CLICK = 1;
 const BP_POINTS_PER_COLLECT = 60; // фиксировано за один сбор пассивного дохода
@@ -76,6 +86,7 @@ module.exports = {
   MAX_LEVEL,
   PREMIUM_PASS_PRICE_STARS,
   COIN_PACKAGES,
+  QUICK_COIN_PACKAGES,
   BP_POINTS_PER_CLICK,
   BP_POINTS_PER_COLLECT,
   BP_POINTS_DAILY_BASE,
