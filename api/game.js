@@ -54,7 +54,8 @@ const {
   BP_POINTS_PER_COLLECT,
   BP_POINTS_DAILY_BASE,
   PREMIUM_PASS_PRICE_STARS,
-  COIN_PACKAGES
+  COIN_PACKAGES,
+  QUICK_COIN_PACKAGES
 } = require('./battlepass-config');
 
 // Проверяем, что запрос действительно пришёл из Telegram и не подделан
@@ -218,7 +219,8 @@ module.exports = async function handler(req, res) {
             levels: bpLevels
           },
           shop: {
-            coinPackages: COIN_PACKAGES
+            coinPackages: COIN_PACKAGES,
+            quickPackages: QUICK_COIN_PACKAGES
           }
         });
       }
