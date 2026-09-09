@@ -56,8 +56,8 @@ module.exports = async function handler(req, res) {
               })
             });
           } else if (parsed.t === 'coins') {
-            const { COIN_PACKAGES } = require('./battlepass-config');
-            const pack = COIN_PACKAGES.find(p => p.id === parsed.p);
+            const { COIN_PACKAGES, QUICK_COIN_PACKAGES } = require('./battlepass-config');
+            const pack = [...COIN_PACKAGES, ...QUICK_COIN_PACKAGES].find(p => p.id === parsed.p);
             if (pack) {
               const { data: u } = await db.from('users')
                 .select('balance, total_earned').eq('telegram_id', parsed.u).maybeSingle();
