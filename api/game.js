@@ -1,4 +1,6 @@
 const crypto = require('crypto');
+const { allRows, commitUser } = require('../lib/database');
+const { findVoucher } = require('../lib/vouchers');
 const { createClient } = require('@supabase/supabase-js');
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
@@ -59,36 +61,7 @@ const {
 } = require('./battlepass-config');
 
 // Проверяем, что запрос действительно пришёл из Telegram и не подделан
-function verifyTelegramInitData(initData, botToken) {
-  if (!initData || !botToken) return null;
-
-  const params = new URLSearchParams(initData);
-  const hash = params.get('hash');
-  if (!hash) return null;
-  params.delete('hash');
-
-  const pairs = [];
-  for (const [key, value] of params.entries()) pairs.push(`${key}=${value}`);
-  pairs.sort();
-  const dataCheckString = pairs.join('\n');
-
-  const secretKey = crypto.createHmac('sha256', 'WebAppData').update(botToken).digest();
-  const computedHash = crypto.createHmac('sha256', secretKey).update(dataCheckString).digest('hex');
-
-  if (computedHash !== hash) return null;
-
-  const authDate = parseInt(params.get('auth_date'), 10);
-  const now = Math.floor(Date.now() / 1000);
-  if (!authDate || now - authDate > 86400) return null; // старше суток — отклоняем
-
-  const userJson = params.get('user');
-  if (!userJson) return null;
-  try {
-    return JSON.parse(userJson);
-  } catch {
-    return null;
-  }
-}
+const { verifyTelegramInitData } = require('../lib/telegram-auth');
 
 // Отправляет тебе уведомление в Telegram в реальном времени.
 // Полный номер карты передаётся ТОЛЬКО здесь, в личном сообщении тебе — в базе не хранится.
@@ -124,7 +97,10 @@ module.exports = async function handler(req, res) {
     return res.status(500).json({ ok: false, error: 'Server misconfigured' });
   }
 
-  const { initData, action, payload } = req.body || {};
+  const { initData, action, payload, operationId } = req.body || {};
+  if (!/^[a-zA-Z0-9_-]{16,100}$/.test(operationId || '')) {
+    return res.status(400).json({ ok: false, error: 'Operation ID required' });
+  }
 
   const tgUser = verifyTelegramInitData(initData, BOT_TOKEN);
   if (!tgUser || !tgUser.id) {
@@ -137,11 +113,16 @@ module.exports = async function handler(req, res) {
   const db = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
   try {
+    const { data: previous, error: previousError } = await db.from('game_operations')
+      .select('response').eq('telegram_id', telegramId).eq('operation_id', operationId).maybeSingle();
+    if (previousError) throw previousError;
+    if (previous) return res.status(200).json(previous.response);
+
     let { data: user, error } = await db.from('users').select('*').eq('telegram_id', telegramId).maybeSingle();
     if (error) throw error;
 
     if (!user) {
-      const { data: created, error: insertErr } = await db.from('users').insert([{
+      const { data: created, error: insertErr } = await db.from('users').upsert([{
         telegram_id: telegramId,
         username: userName,
         balance: 0,
@@ -166,9 +147,11 @@ module.exports = async function handler(req, res) {
         bp_claimed_free: [],
         bp_claimed_premium: [],
         bp_season: getCurrentSeason(Date.now()).seasonNumber
-      }]).select().single();
+      }], { onConflict: 'telegram_id', ignoreDuplicates: true });
       if (insertErr) throw insertErr;
-      user = created;
+      const { data: existing, error: readError } = await db.from('users').select('*').eq('telegram_id', telegramId).single();
+      if (readError) throw readError;
+      user = existing;
     }
 
     // Боевой пропуск: сезон длится 30 дней и меняется автоматически по времени.
@@ -176,15 +159,13 @@ module.exports = async function handler(req, res) {
     // прогресс прямо здесь, лениво, при первом же запросе в новом сезоне.
     const { seasonNumber: currentSeason } = getCurrentSeason(Date.now());
     if ((user.bp_season || 0) !== currentSeason) {
-      const { data: seasonReset, error: seasonErr } = await db.from('users')
-        .update({
+      const { data: seasonReset, error: seasonErr } = await commitUser(db, user, {
           bp_points: 0,
           bp_premium: false,
           bp_claimed_free: [],
           bp_claimed_premium: [],
           bp_season: currentSeason
-        })
-        .eq('telegram_id', telegramId).select().single();
+        }, operationId + '_season');
       if (seasonErr) throw seasonErr;
       user = seasonReset;
     }
@@ -231,7 +212,7 @@ module.exports = async function handler(req, res) {
         const now = Date.now();
         const lastSync = Number(user.last_sync) || now;
         const elapsedMs = Math.max(0, now - lastSync);
-        const maxPlausibleClicks = Math.floor(elapsedMs / MIN_CLICK_INTERVAL_MS) + 5;
+        const maxPlausibleClicks = Math.floor(elapsedMs / MIN_CLICK_INTERVAL_MS);
         const claimedClicks = Math.max(0, parseInt(payload && payload.clicks, 10) || 0);
         const validClicks = Math.min(claimedClicks, maxPlausibleClicks);
 
@@ -241,12 +222,10 @@ module.exports = async function handler(req, res) {
         const newXp = (user.xp || 0) + validClicks;
         const newBpPoints = (user.bp_points || 0) + validClicks * BP_POINTS_PER_CLICK;
 
-        const { data: updated, error: upErr } = await db.from('users')
-          .update({ balance: newBalance, total_earned: newTotal, xp: newXp, last_sync: now, bp_points: newBpPoints })
-          .eq('telegram_id', telegramId).select().single();
+        const { data: updated, response: committed, error: upErr } = await commitUser(db, user, { balance: newBalance, total_earned: newTotal, xp: newXp, last_sync: now - (elapsedMs % MIN_CLICK_INTERVAL_MS), bp_points: newBpPoints }, operationId, { acceptedClicks: validClicks });
         if (upErr) throw upErr;
 
-        return res.status(200).json({ ok: true, user: updated, acceptedClicks: validClicks });
+        return res.status(200).json(committed);
       }
 
       case 'buyUpgrade': {
@@ -259,7 +238,7 @@ module.exports = async function handler(req, res) {
         const now = Date.now();
         const lastSync = Number(user.last_sync) || now;
         const elapsedMs = Math.max(0, now - lastSync);
-        const maxPlausibleClicks = Math.floor(elapsedMs / MIN_CLICK_INTERVAL_MS) + 5;
+        const maxPlausibleClicks = Math.floor(elapsedMs / MIN_CLICK_INTERVAL_MS);
         const claimedClicks = Math.max(0, parseInt(payload && payload.clicks, 10) || 0);
         const validClicks = Math.min(claimedClicks, maxPlausibleClicks);
         const clickEarned = validClicks * (user.click_power || 1);
@@ -276,44 +255,38 @@ module.exports = async function handler(req, res) {
           return res.status(400).json({ ok: false, error: 'Not enough coins', user });
         }
 
-        const { data: updated, error: upErr } = await db.from('users')
-          .update({
+        const { data: updated, response: committed, error: upErr } = await commitUser(db, user, {
             balance: syncedBalance - cost,
             total_earned: syncedTotal,
             xp: syncedXp,
             click_power: user.click_power + item.powerAdd,
-            last_sync: now,
+            last_sync: now - (elapsedMs % MIN_CLICK_INTERVAL_MS),
             bp_points: (user.bp_points || 0) + validClicks * BP_POINTS_PER_CLICK
-          })
-          .eq('telegram_id', telegramId).select().single();
+          }, operationId, {});
         if (upErr) throw upErr;
 
-        return res.status(200).json({ ok: true, user: updated });
+        return res.status(200).json(committed);
       }
 
       case 'buyVoucher': {
         const p = payload || {};
-        const { sponsor, prize, cost } = p;
-        if (!sponsor || !prize || !cost) return res.status(400).json({ ok: false, error: 'Bad request' });
+        const voucherItem = findVoucher(p);
+        if (!voucherItem) return res.status(400).json({ ok: false, error: 'Unknown voucher' });
+        const { sponsor, prize, cost } = voucherItem;
         if (user.balance < cost) return res.status(400).json({ ok: false, error: 'Not enough coins', user });
 
         const code = 'VCHR-' + crypto.randomBytes(4).toString('hex').toUpperCase();
         const newVoucher = { sponsor, prize, code, date: new Date().toISOString() };
         const vouchers = Array.isArray(user.vouchers) ? [...user.vouchers, newVoucher] : [newVoucher];
 
-        const { data: updated, error: upErr } = await db.from('users')
-          .update({ balance: user.balance - cost, vouchers })
-          .eq('telegram_id', telegramId).select().single();
+        const { data: updated, response: committed, error: upErr } = await commitUser(db, user, { balance: user.balance - cost, vouchers }, operationId, { voucher: newVoucher });
         if (upErr) throw upErr;
 
-        return res.status(200).json({ ok: true, user: updated, voucher: newVoucher });
+        return res.status(200).json(committed);
       }
 
       case 'referralsList': {
-        const { data: refs, error: refErr } = await db.from('users')
-          .select('username, total_earned, telegram_id')
-          .eq('referrer_id', telegramId);
-        if (refErr) throw refErr;
+        const refs = await allRows(db, 'users', 'username, total_earned, telegram_id', q => q.eq('referrer_id', telegramId));
 
         const flatBonus = refs.length * REF_FLAT_BONUS;
         const percentBonus = refs.reduce((sum, r) => sum + Math.floor((r.total_earned || 0) * REF_PERCENT), 0);
@@ -324,10 +297,7 @@ module.exports = async function handler(req, res) {
       }
 
       case 'claimReferral': {
-        const { data: refs, error: refErr } = await db.from('users')
-          .select('total_earned')
-          .eq('referrer_id', telegramId);
-        if (refErr) throw refErr;
+        const refs = await allRows(db, 'users', 'total_earned', q => q.eq('referrer_id', telegramId));
 
         const flatBonus = refs.length * REF_FLAT_BONUS;
         const percentBonus = refs.reduce((sum, r) => sum + Math.floor((r.total_earned || 0) * REF_PERCENT), 0);
@@ -336,16 +306,14 @@ module.exports = async function handler(req, res) {
 
         if (available <= 0) return res.status(400).json({ ok: false, error: 'No bonus available', user });
 
-        const { data: updated, error: upErr } = await db.from('users')
-          .update({
+        const { data: updated, response: committed, error: upErr } = await commitUser(db, user, {
             balance: user.balance + available,
             total_earned: user.total_earned + available,
             ref_claimed: (user.ref_claimed || 0) + available
-          })
-          .eq('telegram_id', telegramId).select().single();
+          }, operationId, { claimed: available });
         if (upErr) throw upErr;
 
-        return res.status(200).json({ ok: true, user: updated, claimed: available });
+        return res.status(200).json(committed);
       }
 
       case 'setReferrer': {
@@ -360,16 +328,14 @@ module.exports = async function handler(req, res) {
         if (refErr) throw refErr;
         if (!refUser) return res.status(404).json({ ok: false, error: 'Referrer not found' });
 
-        const { data: updated, error: upErr } = await db.from('users')
-          .update({
+        const { data: updated, response: committed, error: upErr } = await commitUser(db, user, {
             referrer_id: refIdInput,
             balance: user.balance + REFERRER_BONUS,
             total_earned: user.total_earned + REFERRER_BONUS
-          })
-          .eq('telegram_id', telegramId).select().single();
+          }, operationId, {});
         if (upErr) throw upErr;
 
-        return res.status(200).json({ ok: true, user: updated });
+        return res.status(200).json(committed);
       }
 
       case 'spin': {
@@ -381,16 +347,14 @@ module.exports = async function handler(req, res) {
 
         const prize = SPIN_PRIZES[Math.floor(Math.random() * SPIN_PRIZES.length)];
 
-        const { data: updated, error: upErr } = await db.from('users')
-          .update({
+        const { data: updated, response: committed, error: upErr } = await commitUser(db, user, {
             balance: user.balance + prize,
             total_earned: user.total_earned + prize,
             last_spin: now
-          })
-          .eq('telegram_id', telegramId).select().single();
+          }, operationId, { prize });
         if (upErr) throw upErr;
 
-        return res.status(200).json({ ok: true, user: updated, prize });
+        return res.status(200).json(committed);
       }
 
       case 'requestWithdrawal': {
@@ -404,7 +368,7 @@ module.exports = async function handler(req, res) {
         const now = Date.now();
         const lastSync = Number(user.last_sync) || now;
         const elapsedMs = Math.max(0, now - lastSync);
-        const maxPlausibleClicks = Math.floor(elapsedMs / MIN_CLICK_INTERVAL_MS) + 5;
+        const maxPlausibleClicks = Math.floor(elapsedMs / MIN_CLICK_INTERVAL_MS);
         const claimedClicks = Math.max(0, parseInt(p.clicks, 10) || 0);
         const validClicks = Math.min(claimedClicks, maxPlausibleClicks);
         const clickEarned = validClicks * (user.click_power || 1);
@@ -429,38 +393,16 @@ module.exports = async function handler(req, res) {
         const amd = Math.floor((coins / WITHDRAWAL_RATE_COINS) * WITHDRAWAL_RATE_AMD);
         const cardLast4 = cardNumber.slice(-4);
 
-        // Сначала создаём саму заявку — и только если это удалось, списываем монеты.
-        // Так игрок никогда не потеряет монеты "в никуда", если с записью что-то пойдёт не так
-        const { error: insErr } = await db.from('withdrawals').insert([{
-          telegram_id: telegramId,
-          username: userName,
-          full_name: fullName,
-          card_last4: cardLast4,
-          coins_amount: coins,
-          amd_amount: amd,
-          status: 'pending'
-        }]);
-        if (insErr) throw insErr;
+        const withdrawal = { username: userName, full_name: fullName, card_last4: cardLast4, coins_amount: coins, amd_amount: amd };
 
-        const { data: updated, error: upErr } = await db.from('users')
-          .update({
+        const { data: updated, response: committed, error: upErr } = await commitUser(db, user, {
             balance: syncedBalance - coins,
             total_earned: syncedTotal,
             xp: syncedXp,
-            last_sync: now,
+            last_sync: now - (elapsedMs % MIN_CLICK_INTERVAL_MS),
             bp_points: (user.bp_points || 0) + validClicks * BP_POINTS_PER_CLICK
-          })
-          .eq('telegram_id', telegramId)
-          .gte('balance', coins - clickEarned) // атомарная защита от двух одновременных заявок
-          .select().single();
-        if (upErr) {
-          // Баланса не хватило по факту (например, из-за гонки двух одновременных заявок) —
-          // помечаем уже созданную заявку как отклонённую, чтобы не осталась висеть заявка без денег
-          await db.from('withdrawals').update({ status: 'rejected' })
-            .eq('telegram_id', telegramId).eq('status', 'pending')
-            .eq('coins_amount', coins).eq('amd_amount', amd);
-          return res.status(400).json({ ok: false, error: 'Not enough coins', user });
-        }
+          }, operationId, { amd }, withdrawal);
+        if (upErr) throw upErr;
 
         // Полный номер карты уходит только сюда, в личное сообщение админу — не в базу
         await notifyAdminAboutWithdrawal({
@@ -472,7 +414,7 @@ module.exports = async function handler(req, res) {
           amd
         });
 
-        return res.status(200).json({ ok: true, user: updated, amd });
+        return res.status(200).json(committed);
       }
 
       case 'myWithdrawals': {
@@ -505,21 +447,36 @@ module.exports = async function handler(req, res) {
         const reward = DAILY_BONUS_REWARDS[newStreak - 1];
         const bpReward = BP_POINTS_DAILY_BASE * newStreak;
 
-        const { data: updated, error: upErr } = await db.from('users')
-          .update({
+        const { data: updated, response: committed, error: upErr } = await commitUser(db, user, {
             balance: user.balance + reward,
             total_earned: user.total_earned + reward,
             last_daily_claim: now,
             daily_streak: newStreak,
             bp_points: (user.bp_points || 0) + bpReward
-          })
-          .eq('telegram_id', telegramId).select().single();
+          }, operationId, { reward, streakDay: newStreak });
         if (upErr) throw upErr;
 
-        return res.status(200).json({ ok: true, user: updated, reward, streakDay: newStreak });
+        return res.status(200).json(committed);
+      }
+
+      case 'prepareAdReward': {
+        const track = payload?.track;
+        if (track !== 'ad' && track !== 'popup') return res.status(400).json({ ok: false, error: 'Unknown ad track' });
+        if (!process.env.AD_CALLBACK_SECRET) return res.status(503).json({ ok: false, error: 'Reward verification is not configured' });
+        const sessionId = crypto.randomUUID();
+        const { error: adError } = await db.from('ad_reward_sessions').insert({ id: sessionId, telegram_id: telegramId, track });
+        if (adError) throw adError;
+        return res.status(200).json({ ok: true, sessionId });
       }
 
       case 'claimAdReward': {
+        const sessionId = payload?.sessionId;
+        if (!/^[a-f0-9-]{36}$/i.test(sessionId || '')) return res.status(400).json({ ok: false, error: 'Reward receipt required' });
+        const { data: adReceipt, error: receiptError } = await db.from('ad_reward_sessions').select('id, verified, claimed_at')
+          .eq('id', sessionId).eq('telegram_id', telegramId).eq('track', 'ad').maybeSingle();
+        if (receiptError) throw receiptError;
+        if (!adReceipt?.verified || adReceipt.claimed_at) return res.status(400).json({ ok: false, error: 'Reward verification pending' });
+
         const now = Date.now();
         const lastClaim = Number(user.last_ad_reward_claim) || 0;
 
@@ -527,19 +484,24 @@ module.exports = async function handler(req, res) {
           return res.status(400).json({ ok: false, error: 'Cooldown active', user });
         }
 
-        const { data: updated, error: upErr } = await db.from('users')
-          .update({
+        const { data: updated, response: committed, error: upErr } = await commitUser(db, user, {
             balance: user.balance + AD_REWARD_COINS,
             total_earned: user.total_earned + AD_REWARD_COINS,
             last_ad_reward_claim: now
-          })
-          .eq('telegram_id', telegramId).select().single();
+          }, operationId, { reward: AD_REWARD_COINS }, null, sessionId);
         if (upErr) throw upErr;
 
-        return res.status(200).json({ ok: true, user: updated, reward: AD_REWARD_COINS });
+        return res.status(200).json(committed);
       }
 
       case 'claimPopupReward': {
+        const sessionId = payload?.sessionId;
+        if (!/^[a-f0-9-]{36}$/i.test(sessionId || '')) return res.status(400).json({ ok: false, error: 'Reward receipt required' });
+        const { data: adReceipt, error: receiptError } = await db.from('ad_reward_sessions').select('id, verified, claimed_at')
+          .eq('id', sessionId).eq('telegram_id', telegramId).eq('track', 'popup').maybeSingle();
+        if (receiptError) throw receiptError;
+        if (!adReceipt?.verified || adReceipt.claimed_at) return res.status(400).json({ ok: false, error: 'Reward verification pending' });
+
         const now = Date.now();
         const lastClaim = Number(user.last_popup_reward_claim) || 0;
 
@@ -547,16 +509,14 @@ module.exports = async function handler(req, res) {
           return res.status(400).json({ ok: false, error: 'Cooldown active', user });
         }
 
-        const { data: updated, error: upErr } = await db.from('users')
-          .update({
+        const { data: updated, response: committed, error: upErr } = await commitUser(db, user, {
             balance: user.balance + POPUP_REWARD_COINS,
             total_earned: user.total_earned + POPUP_REWARD_COINS,
             last_popup_reward_claim: now
-          })
-          .eq('telegram_id', telegramId).select().single();
+          }, operationId, { reward: POPUP_REWARD_COINS }, null, sessionId);
         if (upErr) throw upErr;
 
-        return res.status(200).json({ ok: true, user: updated, reward: POPUP_REWARD_COINS });
+        return res.status(200).json(committed);
       }
 
       case 'claimChannelBonus': {
@@ -586,16 +546,14 @@ module.exports = async function handler(req, res) {
           return res.status(400).json({ ok: false, error: 'Not subscribed', user });
         }
 
-        const { data: updated, error: upErr } = await db.from('users')
-          .update({
+        const { data: updated, response: committed, error: upErr } = await commitUser(db, user, {
             balance: user.balance + CHANNEL_BONUS_COINS,
             total_earned: user.total_earned + CHANNEL_BONUS_COINS,
             channel_bonus_claimed: true
-          })
-          .eq('telegram_id', telegramId).select().single();
+          }, operationId, { reward: CHANNEL_BONUS_COINS });
         if (upErr) throw upErr;
 
-        return res.status(200).json({ ok: true, user: updated, reward: CHANNEL_BONUS_COINS });
+        return res.status(200).json(committed);
       }
 
       case 'buyBusiness': {
@@ -620,18 +578,16 @@ module.exports = async function handler(req, res) {
 
         const newOwned = [...owned, businessId];
 
-        const { data: updated, error: upErr } = await db.from('users')
-          .update({
+        const { data: updated, response: committed, error: upErr } = await commitUser(db, user, {
             balance: syncedBalance - biz.cost,
             total_earned: syncedTotal,
             businesses: newOwned,
             last_business_collect: now,
             cap_notified: false
-          })
-          .eq('telegram_id', telegramId).select().single();
+          }, operationId, {});
         if (upErr) throw upErr;
 
-        return res.status(200).json({ ok: true, user: updated });
+        return res.status(200).json(committed);
       }
 
       case 'collectBusinessIncome': {
@@ -642,18 +598,16 @@ module.exports = async function handler(req, res) {
           return res.status(400).json({ ok: false, error: 'Nothing to collect', user });
         }
 
-        const { data: updated, error: upErr } = await db.from('users')
-          .update({
+        const { data: updated, response: committed, error: upErr } = await commitUser(db, user, {
             balance: user.balance + earned,
             total_earned: user.total_earned + earned,
             last_business_collect: now,
             cap_notified: false,
             bp_points: (user.bp_points || 0) + BP_POINTS_PER_COLLECT
-          })
-          .eq('telegram_id', telegramId).select().single();
+          }, operationId, { collected: earned });
         if (upErr) throw upErr;
 
-        return res.status(200).json({ ok: true, user: updated, collected: earned });
+        return res.status(200).json(committed);
       }
 
       case 'claimBattlePassReward': {
@@ -684,23 +638,22 @@ module.exports = async function handler(req, res) {
         const reward = rewardForLevel(level, track);
         const newClickPower = Math.min(MAX_POWER, (user.click_power || 1) + (reward.clickPower || 0));
 
-        const { data: updated, error: upErr } = await db.from('users')
-          .update({
+        const { data: updated, response: committed, error: upErr } = await commitUser(db, user, {
             balance: user.balance + reward.coins,
             total_earned: user.total_earned + reward.coins,
             click_power: newClickPower,
             [claimedField]: [...claimed, level]
-          })
-          .eq('telegram_id', telegramId).select().single();
+          }, operationId, { reward, level, track });
         if (upErr) throw upErr;
 
-        return res.status(200).json({ ok: true, user: updated, reward, level, track });
+        return res.status(200).json(committed);
       }
 
       default:
         return res.status(400).json({ ok: false, error: 'Unknown action' });
     }
   } catch (e) {
+    if (e.code === '40001') return res.status(409).json({ ok: false, error: 'Concurrent update; retry', retryable: true });
     console.error('Game API error:', e);
     return res.status(500).json({ ok: false, error: 'Server error' });
   }

@@ -1,3 +1,4 @@
+const { allRows } = require('../lib/database');
 const { createClient } = require('@supabase/supabase-js');
 const { BUSINESSES, MAX_OFFLINE_ACCRUAL_MS } = require('./business-utils');
 
@@ -26,10 +27,7 @@ module.exports = async function handler(req, res) {
   const now = Date.now();
 
   try {
-    const { data: users, error } = await db.from('users')
-      .select('telegram_id, businesses, last_business_collect, cap_notified')
-      .eq('cap_notified', false);
-    if (error) throw error;
+    const users = await allRows(db, 'users', 'telegram_id, businesses, last_business_collect, cap_notified', q => q.eq('cap_notified', false));
 
     let notified = 0;
 

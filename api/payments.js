@@ -1,40 +1,11 @@
-const crypto = require('crypto');
+const { createPaymentPayload } = require('../lib/payment-payload');
 const { PREMIUM_PASS_PRICE_STARS, COIN_PACKAGES, QUICK_COIN_PACKAGES } = require('./battlepass-config');
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
 
 // Та же проверка подлинности, что и в остальных эндпоинтах — сервер не доверяет
 // клиенту, кто он такой, без подписи Telegram
-function verifyTelegramInitData(initData, botToken) {
-  if (!initData || !botToken) return null;
-
-  const params = new URLSearchParams(initData);
-  const hash = params.get('hash');
-  if (!hash) return null;
-  params.delete('hash');
-
-  const pairs = [];
-  for (const [key, value] of params.entries()) pairs.push(`${key}=${value}`);
-  pairs.sort();
-  const dataCheckString = pairs.join('\n');
-
-  const secretKey = crypto.createHmac('sha256', 'WebAppData').update(botToken).digest();
-  const computedHash = crypto.createHmac('sha256', secretKey).update(dataCheckString).digest('hex');
-
-  if (computedHash !== hash) return null;
-
-  const authDate = parseInt(params.get('auth_date'), 10);
-  const now = Math.floor(Date.now() / 1000);
-  if (!authDate || now - authDate > 86400) return null;
-
-  const userJson = params.get('user');
-  if (!userJson) return null;
-  try {
-    return JSON.parse(userJson);
-  } catch {
-    return null;
-  }
-}
+const { verifyTelegramInitData } = require('../lib/telegram-auth');
 
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -57,7 +28,7 @@ module.exports = async function handler(req, res) {
   if (type === 'premium_pass') {
     title = '🎖 Պրեմիում անցագիր';
     description = 'Բացում է Մարտական անցագրի պրեմիում գիծը այս սեզոնի բոլոր մակարդակների համար';
-    payload = JSON.stringify({ t: 'pass', u: tgUser.id });
+    payload = createPaymentPayload('pass', tgUser.id, null, BOT_TOKEN);
     amountStars = PREMIUM_PASS_PRICE_STARS;
   } else if (type === 'coins') {
     const pack = [...COIN_PACKAGES, ...QUICK_COIN_PACKAGES].find(p => p.id === packageId);
@@ -65,7 +36,7 @@ module.exports = async function handler(req, res) {
 
     title = `💰 ${pack.coins.toLocaleString('ru-RU')} մետաղադրամ`;
     description = `${pack.coins.toLocaleString('ru-RU')} 💰 ուղղակիորեն ձեր հաշվին`;
-    payload = JSON.stringify({ t: 'coins', u: tgUser.id, p: pack.id });
+    payload = createPaymentPayload('coins', tgUser.id, pack, BOT_TOKEN);
     amountStars = pack.stars;
   } else {
     return res.status(400).json({ ok: false, error: 'Unknown type' });

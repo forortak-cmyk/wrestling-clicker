@@ -826,15 +826,16 @@
         initAdexiumWidget(5);
 
         // Резервная реклама — Monetag. Вызывается, когда у Adexium нет показа.
-        async function showMonetagAd() {
+        async function showMonetagAd(rewardSessionId) {
             if (typeof window.show_11598709 !== 'function') {
-                console.warn('[Monetag] SDK ещё не загрузился, показать резервную рекламу нечем');
+                if (rewardSessionId) throw new Error('Ad SDK is unavailable');
                 return;
             }
             try {
-                await window.show_11598709();
+                await window.show_11598709(rewardSessionId ? { ymid: rewardSessionId } : undefined);
             } catch (e) {
-                // и резервная реклама не показалась — ок, не мешаем игроку
+                if (rewardSessionId) throw e;
+                // Ordinary interstitial failures must not interrupt gameplay.
                 console.log('[Monetag] реклама не показана:', e);
             }
         }
@@ -948,26 +949,73 @@
 
             // Все запросы к серверу подписываются данными Telegram — сервер сам
             // проверяет подлинность и не доверяет тому, что говорит клиент
-            async callApi(action, payload) {
-                try {
-                    const res = await fetch(API_URL, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ initData: this.tg.initData, action, payload })
-                    });
-                    return await res.json();
-                } catch (e) {
-                    console.error('API error:', e);
-                    return { ok: false, error: 'network' };
+            apiQueue: Promise.resolve(),
+            syncBatch: null,
+            newOperationId() {
+                return crypto.randomUUID();
+            },
+            async requestApi(action, payload, operationId = this.newOperationId()) {
+                for (let attempt = 0; attempt < 3; attempt++) {
+                    try {
+                        const res = await fetch(API_URL, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            keepalive: action === 'sync',
+                            body: JSON.stringify({ initData: this.tg.initData, action, payload, operationId })
+                        });
+                        const result = await res.json();
+                        if (!res.ok && (res.status === 409 || res.status >= 500)) {
+                            if (attempt < 2) {
+                                await new Promise(resolve => setTimeout(resolve, 200 * (attempt + 1)));
+                                continue;
+                            }
+                            return { ...result, retryable: true };
+                        }
+                        return result;
+                    } catch (e) {
+                        if (attempt === 2) return { ok: false, error: 'network', retryable: true };
+                    }
                 }
+            },
+            async syncPending() {
+                if (!this.syncBatch && this.pendingClicks > 0) {
+                    this.syncBatch = { clicks: this.pendingClicks, operationId: this.newOperationId() };
+                    this.pendingClicks = 0;
+                }
+                if (!this.syncBatch) return { ok: true };
+                const batch = this.syncBatch;
+                const result = await this.requestApi('sync', { clicks: batch.clicks }, batch.operationId);
+                if (result.ok) {
+                    this.syncBatch = null;
+                    this.pendingClicks += Math.max(0, batch.clicks - (result.acceptedClicks || 0));
+                    this.applyUserState(result.user);
+                    if (this.pendingClicks > 0) this.scheduleSync();
+                }
+                return result;
+            },
+            callApi(action, payload) {
+                const run = async () => {
+                    if (action === 'sync') return this.syncPending();
+                    if (action !== 'load') {
+                        const synced = await this.syncPending();
+                        if (!synced.ok) return synced;
+                    }
+                    return this.requestApi(action, payload);
+                };
+                const request = this.apiQueue.then(run, run);
+                this.apiQueue = request.catch(() => {});
+                return request;
             },
 
             applyUserState(user) {
                 if (!user) return;
-                this.state.score = user.balance || 0;
-                this.state.totalEarned = user.total_earned || 0;
+                if (Number.isFinite(user.revision) && user.revision < (this.state.revision ?? -1)) return;
+                this.state.revision = user.revision;
+                const localClicks = this.pendingClicks + (this.syncBatch?.clicks || 0);
+                this.state.score = (user.balance || 0) + localClicks * (user.click_power || 1);
+                this.state.totalEarned = (user.total_earned || 0) + localClicks * (user.click_power || 1);
                 this.state.clickPower = user.click_power || 1;
-                this.state.xp = user.xp || 0;
+                this.state.xp = (user.xp || 0) + localClicks;
                 this.state.refClaimed = user.ref_claimed || 0;
                 this.state.myReferrerId = user.referrer_id || null;
                 this.state.lastSpinTime = Number(user.last_spin) || 0;
@@ -1096,20 +1144,19 @@
             },
 
             scheduleSync() {
-                clearTimeout(this.syncTimeout);
-                this.syncTimeout = setTimeout(() => this.forceSync(), 1500);
+                if (this.syncTimeout) return;
+                this.syncTimeout = setTimeout(() => {
+                    this.syncTimeout = null;
+                    this.forceSync();
+                }, 1500);
             },
 
             async forceSync() {
-                if (this.pendingClicks <= 0) return;
-                const clicks = this.pendingClicks;
-                this.pendingClicks = 0;
-
-                const result = await this.callApi('sync', { clicks });
-                if (result.ok) {
-                    // Подтверждаем реальным значением с сервера (на случай расхождений)
-                    this.applyUserState(result.user);
-                }
+                clearTimeout(this.syncTimeout);
+                this.syncTimeout = null;
+                const result = await this.callApi('sync');
+                if (this.pendingClicks > 0 || this.syncBatch) this.scheduleSync();
+                return result;
             },
 
             switchView(viewName, btnEl) {
@@ -1183,9 +1230,7 @@
                     return;
                 }
 
-                clearTimeout(this.syncTimeout);
-                const clicks = this.pendingClicks;
-                this.pendingClicks = 0;
+                const clicks = 0; // Pending clicks are committed by callApi before this action.
 
                 const result = await this.callApi('requestWithdrawal', { coins, fullName, cardNumber, clicks });
 
@@ -1315,11 +1360,8 @@
             },
 
             async buyClickPower() {
-                // Забираем накопленные клики и отправляем их вместе с покупкой —
-                // одним запросом вместо двух подряд
-                clearTimeout(this.syncTimeout);
-                const clicks = this.pendingClicks;
-                this.pendingClicks = 0;
+                // Сначала подтверждаем накопленные клики, затем покупаем улучшение.
+                const clicks = 0; // Pending clicks are committed by callApi before this action.
 
                 const result = await this.callApi('buyUpgrade', { itemId: 1, clicks });
 
@@ -1661,6 +1703,15 @@
                 }
             },
 
+            async claimVerifiedAdReward(action, sessionId) {
+                for (let attempt = 0; attempt < 10; attempt++) {
+                    const result = await this.callApi(action, { sessionId });
+                    if (result.ok || result.error !== 'Reward verification pending') return result;
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                }
+                return { ok: false, error: 'Reward verification pending' };
+            },
+
             async watchAdForCoins() {
                 const btnEl = document.getElementById('watchAdBtn');
                 const msgEl = document.getElementById('watchAdMsg');
@@ -1670,13 +1721,21 @@
                     msgEl.innerText = 'Բեռնվում է գովազդ...';
                 }
 
+                const prepared = await this.callApi('prepareAdReward', { track: 'ad' });
+                if (!prepared.ok) {
+                    if (msgEl) msgEl.innerText = 'Առաջարկը հասանելի չէ, փորձեք ուշ:';
+                    this.renderWatchAdButton();
+                    return;
+                }
                 try {
-                    await showInterstitialAd();
+                    await showMonetagAd(prepared.sessionId);
                 } catch (e) {
-                    // реклама не показалась — ок, всё равно пробуем засчитать попытку ниже
+                    if (msgEl) msgEl.innerText = 'Առաջարկը հասանելի չէ, փորձեք ուշ:';
+                    this.renderWatchAdButton();
+                    return;
                 }
 
-                const result = await this.callApi('claimAdReward');
+                const result = await this.claimVerifiedAdReward('claimAdReward', prepared.sessionId);
 
                 if (!result.ok) {
                     if (msgEl) {
@@ -1724,12 +1783,18 @@
                     msgEl.innerText = 'Բեռնվում է...';
                 }
 
+                const prepared = await this.callApi('prepareAdReward', { track: 'popup' });
+                if (!prepared.ok) {
+                    if (msgEl) msgEl.innerText = 'Առաջարկը հասանելի չէ, փորձեք ուշ:';
+                    this.renderPopupRewardButton();
+                    return;
+                }
                 const runPopup = () => new Promise((resolve, reject) => {
                     if (typeof window.show_11598709 !== 'function') {
                         reject(new Error('SDK not ready'));
                         return;
                     }
-                    window.show_11598709('pop').then(resolve).catch(reject);
+                    window.show_11598709('pop', { ymid: prepared.sessionId }).then(resolve).catch(reject);
                 });
 
                 try {
@@ -1743,7 +1808,7 @@
                     return;
                 }
 
-                const result = await this.callApi('claimPopupReward');
+                const result = await this.claimVerifiedAdReward('claimPopupReward', prepared.sessionId);
 
                 if (!result.ok) {
                     if (msgEl) {
