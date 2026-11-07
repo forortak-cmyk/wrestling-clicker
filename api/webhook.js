@@ -1,3 +1,6 @@
+const crypto = require('crypto');
+const { validatePayment } = require('../lib/payment-payload');
+const { getCurrentSeason } = require('./battlepass-config');
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(200).send('Bot is running');
@@ -8,22 +11,34 @@ module.exports = async function handler(req, res) {
   const APP_URL = 'https://t.me/Wrestler_clicker_bot/app';
   const ADMIN_APP_URL = 'https://wrestling-clicker.vercel.app/admin.html';
 
-  const update = req.body;
+  const secret = process.env.TELEGRAM_WEBHOOK_SECRET;
+  if (!BOT_TOKEN || !secret) return res.status(503).send('Webhook is not configured');
+  const provided = req.headers?.['x-telegram-bot-api-secret-token'];
+  if (typeof provided !== 'string' || Buffer.byteLength(provided) !== Buffer.byteLength(secret) ||
+      !crypto.timingSafeEqual(Buffer.from(provided), Buffer.from(secret))) {
+    return res.status(401).send('Unauthorized');
+  }
+  const update = req.body || {};
   const message = update.message;
 
   // Обязательное подтверждение перед списанием Stars — без этого Telegram
   // не проведёт платёж. У нас нет ограниченных по количеству товаров,
-  // поэтому подтверждаем всегда.
+  // поэтому проверяем владельца, валюту, сумму и сезон перед подтверждением.
   if (update.pre_checkout_query) {
     const pcq = update.pre_checkout_query;
+    const valid = validatePayment(pcq.invoice_payload, pcq.from?.id, pcq.currency, pcq.total_amount, BOT_TOKEN);
+    const currentSeason = getCurrentSeason(Date.now()).seasonNumber;
+    const accepted = !!valid && (valid.t !== 'pass' || valid.s === undefined || valid.s === currentSeason);
     try {
-      await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/answerPreCheckoutQuery`, {
+      const answer = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/answerPreCheckoutQuery`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pre_checkout_query_id: pcq.id, ok: true })
+        body: JSON.stringify({ pre_checkout_query_id: pcq.id, ok: accepted, ...(!accepted ? { error_message: 'Invalid or expired invoice. Please create a new invoice.' } : {}) })
       });
+      if (!(await answer.json()).ok) return res.status(502).send('Telegram rejected checkout response');
     } catch (e) {
       console.error('answerPreCheckoutQuery failed:', e);
+      return res.status(502).send('Checkout response failed');
     }
     return res.status(200).send('OK');
   }
@@ -33,57 +48,36 @@ module.exports = async function handler(req, res) {
     const sp = message.successful_payment;
     const chatId = message.chat.id;
 
-    let parsed = null;
-    try { parsed = JSON.parse(sp.invoice_payload); } catch { parsed = null; }
-
-    if (parsed && parsed.u) {
+    const parsed = validatePayment(sp.invoice_payload, message.from?.id, sp.currency, sp.total_amount, BOT_TOKEN);
+    if (!parsed || typeof sp.telegram_payment_charge_id !== 'string' || !sp.telegram_payment_charge_id) {
+      return res.status(400).send('Invalid payment');
+    }
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!key) return res.status(503).send('Payment storage is not configured');
+    try {
       const { createClient } = require('@supabase/supabase-js');
-      const SUPABASE_URL = process.env.SUPABASE_URL || 'https://bgrvgzgqtryudztngkqm.supabase.co';
-      const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-      if (SUPABASE_SERVICE_ROLE_KEY) {
-        const db = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-
+      const db = createClient(process.env.SUPABASE_URL || 'https://bgrvgzgqtryudztngkqm.supabase.co', key);
+      const { data, error } = await db.rpc('credit_telegram_payment', {
+        p_charge_id: sp.telegram_payment_charge_id, p_telegram_id: parsed.u,
+        p_product: parsed.t, p_coins: parsed.c, p_stars: sp.total_amount,
+        p_season: getCurrentSeason(Date.now()).seasonNumber
+      });
+      if (error) throw error;
+      if (data.credited) {
+        const text = parsed.t === 'pass'
+          ? '🎖 Պրեմիում անցագիրը ակտիվացված է։'
+          : `💰 Ստացել եք ${parsed.c.toLocaleString('ru-RU')} մետաղադրամ: Շնորհակալությու՛ն գնման համար!`;
+        // Receipt is committed first; Telegram retries cannot credit the payment twice.
         try {
-          if (parsed.t === 'pass') {
-            await db.from('users').update({ bp_premium: true }).eq('telegram_id', parsed.u);
-            await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                chat_id: chatId,
-                text: '🎖 Պրեմիում անցագիրը ակտիվացված է։ Բոլոր բարձրակարգ մրցանակները հասանելի են ձեզ այս սեզոնի ընթացքում 💪'
-              })
-            });
-          } else if (parsed.t === 'coins') {
-            const { COIN_PACKAGES, QUICK_COIN_PACKAGES } = require('./battlepass-config');
-            const pack = [...COIN_PACKAGES, ...QUICK_COIN_PACKAGES].find(p => p.id === parsed.p);
-            if (pack) {
-              const { data: u } = await db.from('users')
-                .select('balance, total_earned').eq('telegram_id', parsed.u).maybeSingle();
-              if (u) {
-                await db.from('users').update({
-                  balance: (u.balance || 0) + pack.coins,
-                  total_earned: (u.total_earned || 0) + pack.coins
-                }).eq('telegram_id', parsed.u);
-
-                await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    chat_id: chatId,
-                    text: `💰 Ստացել եք ${pack.coins.toLocaleString('ru-RU')} մետաղադրամ: Շնորհակալությու՛ն գնման համար!`
-                  })
-                });
-              }
-            }
-          }
-        } catch (e) {
-          console.error('Failed to process successful_payment:', e);
-        }
-      } else {
-        console.error('Missing SUPABASE_SERVICE_ROLE_KEY — cannot credit payment', parsed);
+          await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ chat_id: chatId, text })
+          });
+        } catch (e) { console.error('Payment receipt notification failed'); }
       }
+    } catch (e) {
+      console.error('Failed to process payment:', e.code || 'unknown');
+      return res.status(500).send('Payment processing failed; retry');
     }
 
     return res.status(200).send('OK');

@@ -1,4 +1,3 @@
-const crypto = require('crypto');
 const { createClient } = require('@supabase/supabase-js');
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
@@ -6,35 +5,7 @@ const ADMIN_ID = process.env.ADMIN_TELEGRAM_ID;
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://bgrvgzgqtryudztngkqm.supabase.co';
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-function verifyTelegramInitData(initData, botToken) {
-  if (!initData || !botToken) return null;
-  const params = new URLSearchParams(initData);
-  const hash = params.get('hash');
-  if (!hash) return null;
-  params.delete('hash');
-
-  const pairs = [];
-  for (const [key, value] of params.entries()) pairs.push(`${key}=${value}`);
-  pairs.sort();
-  const dataCheckString = pairs.join('\n');
-
-  const secretKey = crypto.createHmac('sha256', 'WebAppData').update(botToken).digest();
-  const computedHash = crypto.createHmac('sha256', secretKey).update(dataCheckString).digest('hex');
-
-  if (computedHash !== hash) return null;
-
-  const authDate = parseInt(params.get('auth_date'), 10);
-  const now = Math.floor(Date.now() / 1000);
-  if (!authDate || now - authDate > 86400) return null;
-
-  const userJson = params.get('user');
-  if (!userJson) return null;
-  try {
-    return JSON.parse(userJson);
-  } catch {
-    return null;
-  }
-}
+const { verifyTelegramInitData } = require('../lib/telegram-auth');
 
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -46,7 +17,7 @@ module.exports = async function handler(req, res) {
     return res.status(500).json({ ok: false, error: 'Server misconfigured' });
   }
 
-  const { initData, text } = req.body || {};
+  const { initData, text, afterTelegramId } = req.body || {};
   const tgUser = verifyTelegramInitData(initData, BOT_TOKEN);
 
   // Только твой Telegram ID может запустить рассылку — все остальные получают отказ
@@ -54,7 +25,9 @@ module.exports = async function handler(req, res) {
     return res.status(403).json({ ok: false, error: 'Forbidden' });
   }
 
-  const message = (text || '').trim();
+  const message = typeof text === 'string' ? text.trim() : '';
+  const cursor = Number(afterTelegramId || 0);
+  if (!Number.isSafeInteger(cursor) || cursor < 0) return res.status(400).json({ ok: false, error: 'Invalid cursor' });
   if (!message) {
     return res.status(400).json({ ok: false, error: 'Empty message' });
   }
@@ -65,7 +38,8 @@ module.exports = async function handler(req, res) {
   const db = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
   try {
-    const { data: users, error } = await db.from('users').select('telegram_id');
+    const { data: users, error } = await db.from('users').select('telegram_id')
+      .gt('telegram_id', cursor).order('telegram_id', { ascending: true }).limit(100);
     if (error) throw error;
 
     let sent = 0;
@@ -73,22 +47,29 @@ module.exports = async function handler(req, res) {
 
     // Отправляем по очереди с небольшой паузой, чтобы не упереться
     // в лимиты Telegram (около 30 сообщений в секунду на бота)
+    const deadline = Date.now() + 45000;
+    let processed = 0;
+    let nextCursor = cursor;
     for (const u of users) {
+      if (Date.now() > deadline) break;
       try {
         const tgRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ chat_id: u.telegram_id, text: message })
+          body: JSON.stringify({ chat_id: u.telegram_id, text: message }),
+          signal: AbortSignal.timeout(5000)
         });
         const tgData = await tgRes.json();
         if (tgData.ok) sent++; else failed++;
       } catch (e) {
         failed++;
       }
+      processed++;
+      nextCursor = u.telegram_id;
       await new Promise(r => setTimeout(r, 35));
     }
 
-    return res.status(200).json({ ok: true, sent, failed, total: users.length });
+    return res.status(200).json({ ok: true, sent, failed, total: processed, nextCursor: processed < users.length || users.length === 100 ? nextCursor : null });
   } catch (e) {
     console.error('Broadcast API error:', e);
     return res.status(500).json({ ok: false, error: 'Server error' });

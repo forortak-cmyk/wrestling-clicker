@@ -36,6 +36,9 @@ const tg = window.Telegram.WebApp;
 tg.expand();
 tg.ready();
 
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
 async function load() {
   const contentEl = document.getElementById('content');
   try {
@@ -56,14 +59,14 @@ async function load() {
 
     const sponsorRows = Object.entries(s.perSponsor)
       .sort((a, b) => b[1] - a[1])
-      .map(([name, count]) => `<tr><td>${name}</td><td>${count}</td></tr>`)
+      .map(([name, count]) => `<tr><td>${escapeHtml(name)}</td><td>${count}</td></tr>`)
       .join('');
 
     const voucherRows = data.vouchers.map(v => `
       <tr>
-        <td>${v.username}<br><span class="sub">ID: ${v.telegram_id}</span></td>
-        <td>${v.sponsor}</td>
-        <td>${v.code}</td>
+        <td>${escapeHtml(v.username)}<br><span class="sub">ID: ${escapeHtml(v.telegram_id)}</span></td>
+        <td>${escapeHtml(v.sponsor)}</td>
+        <td>${escapeHtml(v.code)}</td>
         <td>${new Date(v.date).toLocaleString('ru-RU')}</td>
       </tr>`).join('');
 
@@ -71,15 +74,15 @@ async function load() {
     const leaderboardRows = leaderboard.map((l, i) => `
       <tr class="${i === 0 ? 'gold' : ''}">
         <td>${i + 1}</td>
-        <td>${l.username}<br><span class="sub">ID: ${l.telegram_id}</span></td>
+        <td>${escapeHtml(l.username)}<br><span class="sub">ID: ${escapeHtml(l.telegram_id)}</span></td>
         <td>${l.referrals}</td>
       </tr>`).join('');
 
     const purchases = data.purchases || [];
     const purchaseRows = purchases.map(p => `
       <tr>
-        <td>${p.buyerName}<br><span class="sub">ID: ${p.buyerId || '—'}</span></td>
-        <td>${p.label}</td>
+        <td>${escapeHtml(p.buyerName)}<br><span class="sub">ID: ${escapeHtml(p.buyerId || '—')}</span></td>
+        <td>${escapeHtml(p.label)}</td>
         <td class="purchase-amount">⭐ ${p.amount}</td>
         <td>${new Date(p.date).toLocaleString('ru-RU')}</td>
       </tr>`).join('');
@@ -149,22 +152,20 @@ async function sendBroadcast() {
   msgEl.innerText = 'Отправка... это может занять время';
 
   try {
-    const res = await fetch('/api/broadcast', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ initData: tg.initData, text })
-    });
-    const data = await res.json();
-
-    if (!data.ok) {
-      msgEl.style.color = '#ff3b30';
-      msgEl.innerText = 'Ошибка: ' + (data.error || 'неизвестная');
-      btn.disabled = false;
-      return;
-    }
-
+    let cursor = 0, sent = 0, failed = 0, total = 0;
+    do {
+      const res = await fetch('/api/broadcast', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ initData: tg.initData, text, afterTelegramId: cursor })
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || 'Ошибка рассылки');
+      sent += data.sent; failed += data.failed; total += data.total;
+      cursor = data.nextCursor;
+      msgEl.innerText = `Отправлено: ${sent}, не удалось: ${failed}`;
+    } while (cursor !== null);
     msgEl.style.color = '#34c759';
-    msgEl.innerText = `Готово: доставлено ${data.sent} из ${data.total} (не удалось: ${data.failed})`;
+    msgEl.innerText = `Готово: доставлено ${sent} из ${total} (не удалось: ${failed})`;
     textEl.value = '';
     btn.disabled = false;
   } catch (e) {
